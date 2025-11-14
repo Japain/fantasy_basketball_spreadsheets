@@ -6,6 +6,14 @@ This script systematically explores Yahoo Fantasy API data structures
 to determine how to access player salary/auction price information.
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Add project root to path so we can import from src
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 import json
 from typing import Any
 from src.yahoo_data_fetcher import YahooDataFetcher

@@ -5,6 +5,13 @@ Roster Investigation Script
 Investigate how to properly access roster players and their salary information.
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to path so we can import from src
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 from src.yahoo_data_fetcher import YahooDataFetcher
 from src.logger import logger
 

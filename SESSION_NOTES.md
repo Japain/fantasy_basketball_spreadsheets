@@ -65,27 +65,31 @@ Successfully completed **Phase 1: Foundation & Discovery** of the Fantasy Basket
 - Created `src/auth/README.md` for authentication guidance
 
 ### 8. Salary Data Investigation ✅ **CRITICAL MILESTONE**
-- Created comprehensive investigation scripts:
+- Created comprehensive investigation scripts (in `src/investigation/`):
   - `investigate_salary_data.py` - Systematic exploration of all API endpoints
   - `investigate_roster.py` - Detailed roster and player analysis
+  - `investigate_transactions.py` - FAAB bid and transaction analysis
 - **CONFIRMED**: Salary data IS available through Yahoo API
 - **League Type**: Keeper league with auction draft
 - **Data Sources Identified**:
   1. **Player keeper costs**: `player.is_keeper` field contains keeper salary
   2. **Draft auction prices**: `get_league_draft_results()` provides draft costs
-  3. **FAAB bids**: Team budget tracking for waiver acquisitions
+  3. **FAAB bids**: `league_info.transactions` provides waiver acquisition costs ✅ **CONFIRMED**
 - **Key Findings**:
   - Each player has `is_keeper` dict: `{'status': bool, 'cost': int, 'kept': bool}`
   - Draft results contain `cost` field for each drafted player
   - Teams have `faab_balance` showing remaining budget
   - Total of 224 draft picks (14 rounds × 16 teams)
-  - Example team salary: $189 out of ~$200 budget
+  - **192 total transactions**, 88 with FAAB bids (46%)
+  - **73 players acquired via FAAB** with bids ranging $1-$10+
+  - **100% salary coverage achieved** on test roster (17/17 players)
 - Created comprehensive documentation: `SALARY_DATA_FINDINGS.md`
   - Complete data structure documentation
-  - Salary retrieval strategy with priority order
-  - Implementation recommendations
+  - 3-priority salary retrieval strategy (keeper → draft → FAAB)
+  - Implementation recommendations with working code
+  - FAAB transaction mapping implementation
   - Edge cases and validation checks
-  - Example roster with salaries
+  - Example roster with **100% salary coverage** ($199 total)
 
 ## Key Discoveries
 
@@ -134,12 +138,19 @@ fantasy_basketball/
 │   │   ├── test_auth.py        # ✅ Interactive test
 │   │   ├── complete_auth.py    # ✅ Helper
 │   │   └── README.md           # ✅ Documentation
+│   ├── investigation/           # ✅ Investigation scripts
+│   │   ├── investigate_salary_data.py    # ✅ API exploration
+│   │   ├── investigate_roster.py         # ✅ Roster analysis
+│   │   ├── investigate_transactions.py   # ✅ FAAB investigation
+│   │   └── README.md           # ✅ Investigation docs
 │   ├── yahoo_data_fetcher.py   # ✅ Yahoo API integration
 │   ├── logger.py               # ✅ Logging
 │   └── __init__.py             # ✅ Package init
 ├── tests/                       # ✅ Created (empty)
 ├── credentials/                 # ✅ Google credentials stored here
 ├── .env                         # ✅ All credentials configured
+├── SALARY_DATA_FINDINGS.md      # ✅ Salary investigation results
+├── FAAB_INVESTIGATION_SUMMARY.md # ✅ FAAB findings
 └── TODO.md                      # ✅ Updated with progress
 ```
 
@@ -176,17 +187,21 @@ Priority tasks:
 
 ### Resources Available:
 - **SALARY_DATA_FINDINGS.md** - Complete implementation guide
-- **investigate_salary_data.py** - Working investigation script
-- **investigate_roster.py** - Working roster analysis script
+- **src/investigation/investigate_salary_data.py** - Working investigation script
+- **src/investigation/investigate_roster.py** - Working roster analysis script
+- **src/investigation/investigate_transactions.py** - FAAB investigation script
 
 ## Files to Resume From
 
 - **TODO.md** - Full task list with Phase 1 complete, Phase 2 tasks ready
 - **PLAN.md** - Overall architecture and design
 - **SALARY_DATA_FINDINGS.md** - 📋 **CRITICAL** - Complete salary data documentation
+- **FAAB_INVESTIGATION_SUMMARY.md** - FAAB investigation results
 - **src/yahoo_data_fetcher.py** - Ready to enhance with salary logic
-- **investigate_salary_data.py** - Working investigation script for reference
-- **investigate_roster.py** - Working roster analysis script for reference
+- **src/investigation/** - Investigation scripts for reference
+  - `investigate_salary_data.py` - API exploration
+  - `investigate_roster.py` - Roster analysis
+  - `investigate_transactions.py` - FAAB investigation
 - **src/auth/auth_with_code.py** - For re-authentication if needed
 - **.env** - Contains working OAuth tokens
 
@@ -196,11 +211,10 @@ Priority tasks:
 # Verify authentication still works
 uv run python -c "from src.yahoo_data_fetcher import YahooDataFetcher; f = YahooDataFetcher(browser_callback=False); print(f.get_league_info().name)"
 
-# Run salary investigation (see findings)
-uv run python investigate_salary_data.py
-
-# Run roster analysis (detailed player/salary info)
-uv run python investigate_roster.py
+# Run investigation scripts (from src/investigation/)
+uv run python src/investigation/investigate_salary_data.py
+uv run python src/investigation/investigate_roster.py
+uv run python src/investigation/investigate_transactions.py
 ```
 
 ## Notes for Next Session

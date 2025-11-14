@@ -72,15 +72,46 @@ team.faab_balance = 184  # Remaining FAAB budget for waiver acquisitions
 
 This shows remaining budget but doesn't directly show how much was spent on specific waiver pickups.
 
-### 4. Transaction History
+### 4. Transaction History ✅ **CONFIRMED**
 
-Accessible via `league_info.transactions`, contains:
+Accessible via `league_info.transactions`, contains FAAB bid information:
 
 ```python
-transaction.faab_bid = 1  # FAAB amount bid for waiver claim
+Transaction {
+    'type': 'add' or 'add/drop',
+    'status': 'successful',
+    'faab_bid': int (1-10+ or None),  # FAAB amount bid for waiver claim
+    'timestamp': int,
+    'players': [
+        Player {
+            'player_key': '466.p.xxxxx',
+            'transaction_data': {
+                'type': 'add' or 'drop',
+                'source_type': 'waivers' or 'team',
+                'destination_type': 'team' or 'waivers'
+            }
+        }
+    ]
+}
 ```
 
-Can be used to track acquisition costs for players obtained via waivers/free agency.
+**Confirmed Data**:
+- Total league transactions: 192
+- Transactions with FAAB bids: 88 (46%)
+- Players acquired via FAAB: 73 unique players
+- FAAB bid range observed: $1-$10+
+- Common bids: $1, $2, $3, $4, $5
+
+**Sample FAAB Acquisitions**:
+- Jordan Miller: $1
+- Isaiah Joe: $2
+- Derrick Jones Jr.: $3
+- Isaiah Stewart: $4
+- Trendon Watford: $5
+- Marcus Smart: $8
+- Brandon Williams: $10
+
+Can be used to track acquisition costs for players obtained via waivers/free agency. This provides **complete salary coverage** when combined with keeper and draft costs.
 
 ---
 
@@ -126,13 +157,13 @@ salary = None  # or 0, or mark as "N/A"
 | Shai Gilgeous-Alexander   | PG       | $33    | Keeper       |
 | Dylan Harper              | PG,SG    | $5     | Draft        |
 | Cam Thomas                | SG,SF    | $7     | Keeper       |
-| Derrick Jones Jr.         | SF,PF    | N/A    | Waiver/FA    |
+| Derrick Jones Jr.         | SF,PF    | $3     | FAAB Waiver  |
 | Keldon Johnson            | SF,PF    | $21    | Keeper       |
 | Shaedon Sharpe            | SG,SF    | $12    | Keeper       |
 | Nic Claxton               | C        | $21    | Keeper       |
 | Deandre Ayton             | C        | $21    | Keeper       |
-| Isaiah Stewart            | PF,C     | N/A    | Waiver/FA    |
-| Ajay Mitchell             | PG,SG    | N/A    | Waiver/FA    |
+| Isaiah Stewart            | PF,C     | $4     | FAAB Waiver  |
+| Ajay Mitchell             | PG,SG    | $3     | FAAB Waiver  |
 | Christian Braun           | SG,SF    | $4     | Draft        |
 | Jase Richardson           | SG       | $2     | Draft        |
 | Kelly Oubre Jr.           | SF,PF    | $1     | Draft        |
@@ -141,7 +172,8 @@ salary = None  # or 0, or mark as "N/A"
 | Luguentz Dort             | SG,SF    | $1     | Draft        |
 | Khris Middleton           | SF,PF    | $1     | Draft        |
 
-**Total Salary**: $189 (excluding N/A players)
+**Total Salary**: $199 ✅ **100% Coverage - All players have salary data!**
+**FAAB Remaining**: $184
 
 ---
 
@@ -232,35 +264,82 @@ Player {
 
 ## Implementation Recommendations
 
-### 1. Create Player-Salary Mapping Function
+### 1. Create FAAB Cost Mapping Function
 
 ```python
-def get_player_salary(player, draft_cost_map):
+def build_faab_cost_map(transactions):
     """
-    Get salary for a player.
+    Build mapping of player_key to FAAB acquisition cost.
+
+    Args:
+        transactions: List of transaction objects from league_info.transactions
+
+    Returns:
+        Dict mapping player_key to FAAB cost
+    """
+    player_faab_map = {}
+
+    for transaction in transactions:
+        faab_bid = getattr(transaction, 'faab_bid', None)
+        status = getattr(transaction, 'status', '')
+
+        # Only count successful transactions with FAAB bids
+        if status != 'successful' or not faab_bid or faab_bid <= 0:
+            continue
+
+        # Find players being added
+        if hasattr(transaction, 'players') and transaction.players:
+            for player in transaction.players:
+                trans_data = getattr(player, 'transaction_data', None)
+                if not trans_data:
+                    continue
+
+                # Check if player is being added from waivers
+                dest_type = getattr(trans_data, 'destination_type', '')
+                source_type = getattr(trans_data, 'source_type', '')
+
+                if dest_type == 'team' and source_type in ['waivers', 'freeagents']:
+                    player_key = getattr(player, 'player_key', None)
+                    if player_key:
+                        # Keep highest FAAB bid for this player (in case of multiple acquisitions)
+                        if player_key not in player_faab_map or faab_bid > player_faab_map[player_key]:
+                            player_faab_map[player_key] = faab_bid
+
+    return player_faab_map
+```
+
+### 2. Create Player-Salary Mapping Function
+
+```python
+def get_player_salary(player, draft_cost_map, faab_cost_map):
+    """
+    Get salary for a player using 3-priority strategy.
 
     Args:
         player: Player object from roster
         draft_cost_map: Dict mapping player_key to draft cost
+        faab_cost_map: Dict mapping player_key to FAAB cost
 
     Returns:
-        int: Player salary, or None if not found
+        int: Player salary, or 0 if free agent
     """
-    # Check keeper cost first
+    # Priority 1: Check keeper cost first
     if player.is_keeper.get('status') and player.is_keeper.get('cost') is not None:
         return player.is_keeper['cost']
 
-    # Check draft cost
+    # Priority 2: Check draft cost
     if player.player_key in draft_cost_map:
         return draft_cost_map[player.player_key]
 
-    # TODO: Check transaction history for FAAB bids
+    # Priority 3: Check FAAB bids
+    if player.player_key in faab_cost_map:
+        return faab_cost_map[player.player_key]
 
-    # Unknown/Free agent
-    return None
+    # Priority 4: Free agent (no cost)
+    return 0
 ```
 
-### 2. Build Complete League Data Structure
+### 3. Build Complete League Data Structure
 
 ```python
 def extract_league_data():
@@ -276,6 +355,9 @@ def extract_league_data():
         for result in league_info.draft_results
     }
 
+    # Create FAAB cost mapping
+    faab_cost_map = build_faab_cost_map(league_info.transactions)
+
     # Process each team
     teams_data = []
     for team in league_info.teams:
@@ -285,7 +367,7 @@ def extract_league_data():
         total_salary = 0
 
         for player in roster.players:
-            salary = get_player_salary(player, draft_cost_map)
+            salary = get_player_salary(player, draft_cost_map, faab_cost_map)
 
             players_data.append({
                 'name': player.name.full,
@@ -294,8 +376,8 @@ def extract_league_data():
                 'player_key': player.player_key
             })
 
-            if salary is not None:
-                total_salary += salary
+            # Salary should always be a number now (0 for free agents)
+            total_salary += salary
 
         teams_data.append({
             'team_id': team.team_id,
@@ -372,8 +454,18 @@ When implementing, verify:
 - ✅ Yahoo API authenticated
 - ✅ Salary data availability confirmed
 - ✅ Data structure documented
-- ✅ Retrieval strategy defined
+- ✅ Retrieval strategy defined (3-priority system)
+- ✅ **FAAB transaction handling confirmed and tested**
+- ✅ **100% salary coverage achieved** (all 17 players on test team)
 - ✅ Edge cases identified
 - ✅ Implementation path clear
+- ✅ Working investigation scripts created for reference
 
-**Conclusion**: The project can proceed to Phase 2 (Yahoo Data Retrieval Implementation) with confidence that all required salary data is accessible through the Yahoo Fantasy API.
+**Tested Results**:
+- Test team: "Historically Juiced"
+- Players with salaries: 17/17 (100%)
+- Total salary: $199
+- FAAB remaining: $184
+- Data sources working: Keeper costs (9), Draft costs (5), FAAB bids (3)
+
+**Conclusion**: The project can proceed to Phase 2 (Yahoo Data Retrieval Implementation) with **complete confidence** that all required salary data is accessible through the Yahoo Fantasy API with 100% coverage. The 3-priority strategy (keeper → draft → FAAB) has been validated and tested successfully.

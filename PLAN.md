@@ -102,12 +102,13 @@ league_data = {
                 {
                     "player_name": str,
                     "position": str,
-                    "salary": float,  # or int, depending on API
+                    "salary": int,  # Player salary/cost
+                    "source": str,  # "Keeper", "Draft", "FAAB Waiver", or "Free Agent"
                     "player_id": str
                 }
             ],
-            "total_salary": float,
-            "budget_remaining": float
+            "total_salary": int,
+            "faab_remaining": int  # Renamed from budget_remaining
         }
     ]
 }
@@ -178,16 +179,17 @@ def get_google_docs_service():
 [Subtitle] Season Year
 
 [Team 1 Header] Team Name (Manager: Manager Name)
-┌─────────────────────┬──────────┬──────────┐
-│ Player Name         │ Position │ Salary   │
-├─────────────────────┼──────────┼──────────┤
-│ LeBron James        │ SF       │ $45      │
-│ Anthony Davis       │ C        │ $38      │
-│ ...                 │ ...      │ ...      │
-├─────────────────────┼──────────┼──────────┤
-│ Total Salary        │          │ $200     │
-│ Budget Remaining    │          │ $0       │
-└─────────────────────┴──────────┴──────────┘
+┌─────────────────────┬──────────┬──────────┬───────────────┐
+│ Player Name         │ Position │ Salary   │ Source        │
+├─────────────────────┼──────────┼──────────┼───────────────┤
+│ LeBron James        │ SF       │ $45      │ Keeper        │
+│ Anthony Davis       │ C        │ $38      │ Draft         │
+│ Russell Westbrook   │ PG       │ $3       │ FAAB Waiver   │
+│ ...                 │ ...      │ ...      │ ...           │
+├─────────────────────┼──────────┼──────────┼───────────────┤
+│ Total Salary        │          │ $200     │               │
+│ FAAB Remaining      │          │ $184     │               │
+└─────────────────────┴──────────┴──────────┴───────────────┘
 
 [Team 2 Header] ...
 ```
@@ -195,9 +197,14 @@ def get_google_docs_service():
 **Formatting Considerations**:
 - Use Google Docs API batch update requests
 - Apply text styles (bold, font size) for headers
-- Create tables with proper borders
+- Create tables with proper borders (4 columns: Player, Position, Salary, Source)
 - Add color highlighting for headers
 - Sort players by position or salary
+- Source column provides transparency on salary origin:
+  - "Keeper" - Retained from previous season
+  - "Draft" - Acquired in auction draft
+  - "FAAB Waiver" - Acquired via FAAB bid
+  - "Free Agent" - Picked up at no cost
 
 ### Phase 4: Application Entry Point
 
@@ -346,6 +353,9 @@ fantasy_basketball/
 ├── CLAUDE.md
 ├── PLAN.md
 ├── TODO.md
+├── SESSION_NOTES.md              # Development session notes
+├── SALARY_DATA_FINDINGS.md       # Salary investigation results
+├── FAAB_INVESTIGATION_SUMMARY.md # FAAB investigation summary
 ├── main.py                       # Application entry point
 ├── config.py                     # Configuration management
 ├── src/
@@ -356,6 +366,11 @@ fantasy_basketball/
 │   │   ├── auth_with_code.py   # OAuth completion script
 │   │   ├── test_auth.py        # Interactive auth test
 │   │   └── complete_auth.py    # OAuth helper
+│   ├── investigation/           # Investigation & exploration scripts
+│   │   ├── README.md           # Investigation documentation
+│   │   ├── investigate_salary_data.py    # API exploration
+│   │   ├── investigate_roster.py         # Roster analysis
+│   │   └── investigate_transactions.py   # FAAB investigation
 │   ├── yahoo_data_fetcher.py    # Yahoo API integration
 │   ├── data_processor.py        # Data transformation
 │   ├── google_auth.py           # Google authentication
