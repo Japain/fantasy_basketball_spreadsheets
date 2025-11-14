@@ -11,3 +11,6 @@ wheels/
 
 # Envirorment file
 .env
+
+# Credentials and secrets
+client_secret_*.json

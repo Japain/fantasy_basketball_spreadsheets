@@ -19,6 +19,7 @@ Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library)
 - Required environment variables:
   - `YAHOO_CONSUMER_KEY`: Yahoo Fantasy Sports API credentials
   - Additional API keys may be present for other services
+- `client_secret_244271698600-19dd7prtef55t0845qibik3l0t1mo0pn.apps.googleusercontent.com.json` file contains google doc api credentials
 
 ## Common Commands
 

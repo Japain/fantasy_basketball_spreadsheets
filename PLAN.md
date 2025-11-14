@@ -4,6 +4,12 @@
 
 Build a Python application that retrieves roster and salary information from a Yahoo Fantasy Basketball league using the yfpy library and Yahoo Fantasy API, then generates a formatted Google Document displaying each team's roster with player names, positions, and salaries.
 
+## Quick Start
+
+**For implementation steps**: See [TODO.md](./TODO.md) for a detailed, actionable checklist of all tasks.
+
+**Critical First Step**: Before building anything, we must investigate whether salary data is available through the Yahoo Fantasy API. This will determine our entire data retrieval strategy (see Phase 1 in TODO.md).
+
 ## Key Challenges & Considerations
 
 ### 1. Salary Data Availability
@@ -230,7 +236,7 @@ YAHOO_CONSUMER_SECRET=your_secret
 GOOGLE_CREDENTIALS_PATH=path/to/credentials.json
 
 # League Configuration
-NBA_LEAGUE_ID=your_league_id
+NBA_LEAGUE_ID=68958
 NBA_GAME_ID=449  # 2024-2025 season
 
 # Output
@@ -284,30 +290,49 @@ CACHE_DIR=./league_data
 
 ## Implementation Sequence
 
-### Sprint 1: Foundation & Discovery (Days 1-2)
-1. Set up project structure
+**Note**: Detailed task breakdown available in [TODO.md](./TODO.md). The sequence below provides high-level phases.
+
+### Phase 1: Foundation & Discovery (Sprint 1)
+**Goal**: Understand the data landscape and set up project foundation
+
+1. Set up project structure (directories, config files)
 2. Configure Yahoo API authentication
-3. **Critical**: Investigate salary data availability
+3. **Critical**: Investigate salary data availability through API exploration
 4. Create data models based on actual API responses
 5. Build basic data fetcher
 
-### Sprint 2: Yahoo Integration (Days 3-4)
-1. Implement complete Yahoo data retrieval
+**Success Criteria**: Yahoo API authenticated, salary data availability confirmed, data structure documented
+
+### Phase 2: Yahoo Integration (Sprint 2)
+**Goal**: Complete implementation of Yahoo data retrieval and processing
+
+1. Implement complete Yahoo data retrieval (all teams, rosters, salaries)
 2. Build data processing and validation
 3. Add error handling and logging
 4. Test with real league data
 
-### Sprint 3: Google Docs Integration (Days 5-6)
-1. Set up Google API authentication
-2. Implement document creation
-3. Build formatting and table generation
-4. Test document output
+**Success Criteria**: Can reliably fetch and process all league data with proper error handling
 
-### Sprint 4: Polish & Testing (Day 7)
-1. End-to-end integration
-2. Error handling refinement
-3. Documentation
-4. Final testing with various league configurations
+### Phase 3: Google Docs Integration (Sprint 3)
+**Goal**: Implement document generation with proper formatting
+
+1. Set up Google API authentication
+2. Implement document creation and title/subtitle formatting
+3. Build table generation and formatting
+4. Test document output with sample data
+
+**Success Criteria**: Can generate properly formatted Google Doc with sample data
+
+### Phase 4: Integration & Polish (Sprint 4)
+**Goal**: Complete end-to-end flow and ensure production readiness
+
+1. Integrate all components in main.py
+2. End-to-end testing with real data
+3. Error handling refinement
+4. Documentation and code quality improvements
+5. Final testing with various league configurations
+
+**Success Criteria**: Application runs successfully from start to finish, producing properly formatted documents
 
 ## Project Structure
 
@@ -391,3 +416,12 @@ python-dotenv = ">=1.0.0"            # Already included with yfpy
 - ✅ Document includes all teams, players, positions, and salaries
 - ✅ Application handles errors gracefully
 - ✅ Code is well-documented and maintainable
+
+---
+
+## Document Relationships
+
+- **PLAN.md** (this file): High-level architecture, design decisions, technical considerations, and overall strategy
+- **TODO.md**: Granular, actionable checklist of specific tasks to implement the plan
+- **CLAUDE.md**: Development setup, conventions, and guidance for Claude Code when working on this codebase
+- **README.md**: User-facing documentation (to be created during implementation)
