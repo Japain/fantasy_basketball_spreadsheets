@@ -2,7 +2,7 @@
 ================================================================================
                FANTASY BASKETBALL LEAGUE DATA EXTRACTION RESULTS                
 ================================================================================
-Generated: 2025-11-14 14:09:33
+Generated: 2025-11-14 14:35:59
 League: b'Squad Goals'
 Season: 2025
 
@@ -21,20 +21,20 @@ Total Players: 280
 Average Roster Size: 17.5
 
 Salary Statistics:
-  Total Salary Spent: $3157
-  Average Per Team: $197.31
-  Min Team Salary: $171
-  Max Team Salary: $233
-  Player Salary Range: $1 - $63
-  Average Player Salary: $12.14
+  Total Salary Spent: $3490
+  Average Per Team: $218.12
+  Min Team Salary: $189
+  Max Team Salary: $239
+  Player Salary Range: $1 - $66
+  Average Player Salary: $13.42
 
 FAAB Statistics:
   Total FAAB Remaining: $2900
   Average FAAB Remaining: $181.25
 
 Players by Acquisition Source:
-  Keeper: 115
-  Draft: 90
+  Keeper: 165
+  Draft: 40
   FAAB Waiver: 55
   Free Agent: 20
 
@@ -43,26 +43,26 @@ Players by Acquisition Source:
 ================================================================================
 Rank   Player Name               Pos      NBA Team Salary   Source          Fantasy Team        
 ------------------------------------------------------------------------------------------------------------------------
-1      Giannis Antetokounmpo     PF,C     MIL      $63      Keeper          b"Ja's Rebuild"     
-2      Anthony Davis             PF,C     DAL      $63      Keeper          b'Huskies'          
-3      Nikola Jokić              C        DEN      $63      Keeper          b'JD&TheStraightShot'
+1      Nikola Jokić              C        DEN      $66      Keeper          b'JD&TheStraightShot'
+2      Stephen Curry             PG       GSW      $66      Keeper          b"Denny's Optimal Team"
+3      Giannis Antetokounmpo     PF,C     MIL      $63      Keeper          b"Ja's Rebuild"     
 4      James Harden              PG,SG    LAC      $63      Keeper          b'Bimmy on the bench'
 5      Karl-Anthony Towns        PF,C     NYK      $63      Keeper          b'TO Squad'         
-6      Stephen Curry             PG       GSW      $63      Keeper          b"Denny's Optimal Team"
+6      Anthony Davis             PF,C     DAL      $60      Keeper          b'Huskies'          
 7      Kevin Durant              SG,SF,PF HOU      $58      Keeper          b'Plummeting Business Centaur'
-8      Myles Turner              C        MIL      $51      Draft           b'Dimes & Nichols'  
-9      Kawhi Leonard             SF,PF    LAC      $49      Keeper          b'The Best Ever'    
-10     Rudy Gobert               C        MIN      $45      Draft           b'To the Victor go the Spoils'
+8      Kawhi Leonard             SF,PF    LAC      $52      Keeper          b'The Best Ever'    
+9      Myles Turner              C        MIL      $51      Draft           b'Dimes & Nichols'  
+10     Rudy Gobert               C        MIN      $45      Keeper          b'To the Victor go the Spoils'
 11     Nikola Vučević            C        CHI      $44      Draft           b'Business Centaur' 
-12     Kristaps Porziņģis        PF,C     ATL      $43      Draft           b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
-13     Joel Embiid               C        PHI      $41      Keeper          b'Huskies'          
+12     Joel Embiid               C        PHI      $44      Keeper          b'Huskies'          
+13     Kristaps Porziņģis        PF,C     ATL      $43      Draft           b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
 14     LeBron James              SF,PF    LAL      $39      Draft           b'LeDon'            
-15     Jimmy Butler III          SG,SF,PF GSW      $35      Draft           b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
-16     Julius Randle             PF,C     MIN      $35      Keeper          b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
-17     De'Aaron Fox              PG,SG    SAS      $33      Keeper          b'Historically Juiced'
-18     Shai Gilgeous-Alexander   PG       OKC      $33      Keeper          b'Historically Juiced'
-19     Devin Booker              PG,SG    PHX      $33      Keeper          b"Ja's Rebuild"     
-20     Donovan Mitchell          PG,SG    CLE      $33      Keeper          b'LeDon'            
+15     Julius Randle             PF,C     MIN      $38      Keeper          b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
+16     De'Aaron Fox              PG,SG    SAS      $36      Keeper          b'Historically Juiced'
+17     Donovan Mitchell          PG,SG    CLE      $36      Keeper          b'LeDon'            
+18     DeMar DeRozan             SF,PF    SAC      $35      Keeper          b'Plummeting Business Centaur'
+19     Jimmy Butler III          SG,SF,PF GSW      $35      Draft           b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
+20     Devin Booker              PG,SG    PHX      $33      Keeper          b"Ja's Rebuild"     
 
 ================================================================================
                  DETAILED TEAM ROSTERS (Sorted by Total Salary)                 
@@ -71,31 +71,31 @@ Rank   Player Name               Pos      NBA Team Salary   Source          Fant
 
 #1 - b'To the Victor go the Spoils'
 Manager: Jon
-Total Salary: $233
+Total Salary: $239
 FAAB Remaining: $162
 Roster Size: 18
 
 Salary Breakdown by Source:
-  Keeper: $54 (4 players)
-  Draft: $141 (9 players)
+  Keeper: $178 (9 players)
+  Draft: $23 (4 players)
   FAAB Waiver: $38 (5 players)
   Free Agent: $0 (0 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  Rudy Gobert               C        MIN      $45      Draft          
-  Draymond Green            PF,C     GSW      $28      Draft          
-  Andrew Wiggins            SG,SF    MIA      $28      Draft          
-  Tobias Harris             PF       DET      $28      Keeper         
+  Rudy Gobert               C        MIN      $45      Keeper         
+  Tobias Harris             PF       DET      $31      Keeper         
+  Draymond Green            PF,C     GSW      $28      Keeper         
+  Andrew Wiggins            SG,SF    MIA      $28      Keeper         
   John Collins              PF,C     LAC      $20      Draft          
   CJ McCollum               PG,SG    WAS      $16      FAAB Waiver    
   Onyeka Okongwu            PF,C     ATL      $12      Keeper         
-  Malik Monk                SG       SAC      $11      Draft          
+  Victor Wembanyama         C        SAS      $11      Keeper         
+  Malik Monk                SG       SAC      $11      Keeper         
   Brandon Williams          PG       DAL      $10      FAAB Waiver    
-  Victor Wembanyama         C        SAS      $8       Keeper         
   Collin Sexton             PG,SG    CHA      $6       Keeper         
-  Quentin Grimes            SG,SF    PHI      $6       Draft          
+  Quentin Grimes            SG,SF    PHI      $6       Keeper         
   Precious Achiuwa          PF,C     SAC      $6       FAAB Waiver    
   Trendon Watford           PF,C     PHI      $5       FAAB Waiver    
   Duncan Robinson           SG,SF    DET      $1       FAAB Waiver    
@@ -104,15 +104,84 @@ Roster:
   Gary Trent Jr.            SG,SF    MIL      $1       Draft          
 --------------------------------------------------------------------------------
 
-#2 - b"Ja's Rebuild"
+#2 - b'JD&TheStraightShot'
+Manager: Alon
+Total Salary: $228
+FAAB Remaining: $135
+Roster Size: 19
+
+Salary Breakdown by Source:
+  Keeper: $201 (12 players)
+  Draft: $4 (1 players)
+  FAAB Waiver: $23 (5 players)
+  Free Agent: $0 (1 players)
+
+Roster:
+  Player Name               Pos      NBA Team Salary   Source         
+  ---------------------------------------------------------------------------
+  Nikola Jokić              C        DEN      $66      Keeper         
+  Tyrese Maxey              PG       PHI      $24      Keeper         
+  Austin Reaves             PG,SG,SF LAL      $18      Keeper         
+  Trey Murphy III           SG,SF,PF NOP      $18      Keeper         
+  Jaden Ivey                PG,SG    DET      $15      Keeper         
+  Jalen Duren               C        DET      $13      Keeper         
+  Cameron Johnson           SF,PF    DEN      $13      FAAB Waiver    
+  Jrue Holiday              PG,SG    POR      $12      Keeper         
+  Tari Eason                SF,PF    HOU      $12      Keeper         
+  Isaiah Collier            PG,SG    UTA      $10      Keeper         
+  Donovan Clingan           C        POR      $6       Keeper         
+  Toumani Camara            SF,PF    POR      $5       Keeper         
+  Dennis Schröder           PG,SG    SAC      $4       FAAB Waiver    
+  P.J. Washington           SF,PF    DAL      $4       Draft          
+  Svi Mykhailiuk            SG,SF    UTA      $3       FAAB Waiver    
+  Jock Landale              C        MEM      $2       FAAB Waiver    
+  Ryan Kalkbrenner          C        CHA      $2       Keeper         
+  Paul Reed                 C        DET      $1       FAAB Waiver    
+  Andre Drummond            C        PHI      $0       Free Agent     
+--------------------------------------------------------------------------------
+
+#3 - b'Historically Juiced'
+Manager: Lord
+Total Salary: $226
+FAAB Remaining: $184
+Roster Size: 16
+
+Salary Breakdown by Source:
+  Keeper: $212 (11 players)
+  Draft: $1 (1 players)
+  FAAB Waiver: $13 (4 players)
+  Free Agent: $0 (0 players)
+
+Roster:
+  Player Name               Pos      NBA Team Salary   Source         
+  ---------------------------------------------------------------------------
+  De'Aaron Fox              PG,SG    SAS      $36      Keeper         
+  Shai Gilgeous-Alexander   PG       OKC      $30      Keeper         
+  Jaren Jackson Jr.         PF,C     MEM      $30      Keeper         
+  Keldon Johnson            SF,PF    SAS      $24      Keeper         
+  Deandre Ayton             C        LAL      $24      Keeper         
+  Nic Claxton               C        BKN      $24      Keeper         
+  Cam Thomas                SG,SF    BKN      $18      Keeper         
+  Shaedon Sharpe            SG,SF    POR      $15      Keeper         
+  Dylan Harper              PG,SG    SAS      $5       Keeper         
+  Isaiah Stewart            PF,C     DET      $4       FAAB Waiver    
+  Christian Braun           SG,SF    DEN      $4       Keeper         
+  Collin Gillespie          PG       PHX      $4       FAAB Waiver    
+  Ajay Mitchell             PG,SG    OKC      $3       FAAB Waiver    
+  Jase Richardson           SG       ORL      $2       Keeper         
+  Will Richard              SG       GSW      $2       FAAB Waiver    
+  Kelly Oubre Jr.           SF,PF    PHI      $1       Draft          
+--------------------------------------------------------------------------------
+
+#4 - b"Ja's Rebuild"
 Manager: OBFmdse
-Total Salary: $215
+Total Salary: $224
 FAAB Remaining: $200
 Roster Size: 14
 
 Salary Breakdown by Source:
-  Keeper: $176 (7 players)
-  Draft: $39 (7 players)
+  Keeper: $192 (10 players)
+  Draft: $32 (4 players)
   FAAB Waiver: $0 (0 players)
   Free Agent: $0 (0 players)
 
@@ -123,64 +192,95 @@ Roster:
   Devin Booker              PG,SG    PHX      $33      Keeper         
   Kevin Porter Jr.          PG,SG    MIL      $29      Draft          
   Ja Morant                 PG       MEM      $27      Keeper         
-  Zach LaVine               PG,SG,SF SAC      $24      Keeper         
-  Brandon Ingram            SG,SF,PF TOR      $21      Keeper         
-  Stephon Castle            PG,SG    SAS      $5       Keeper         
-  Derik Queen               C        NOP      $3       Draft          
+  Zach LaVine               PG,SG,SF SAC      $27      Keeper         
+  Brandon Ingram            SG,SF,PF TOR      $24      Keeper         
+  Stephon Castle            PG,SG    SAS      $8       Keeper         
+  Derik Queen               C        NOP      $3       Keeper         
   Rob Dillingham            PG       MIN      $3       Keeper         
-  Anthony Black             PG,SG    ORL      $3       Draft          
-  Will Riley                SF       WAS      $1       Draft          
+  Anthony Black             PG,SG    ORL      $3       Keeper         
+  Will Riley                SF       WAS      $1       Keeper         
   Jerami Grant              SF,PF    POR      $1       Draft          
   Tyus Jones                PG       ORL      $1       Draft          
   Jordan Clarkson           PG,SG    NYK      $1       Draft          
 --------------------------------------------------------------------------------
 
-#3 - b'Dimes & Nichols'
-Manager: Daniel
-Total Salary: $204
-FAAB Remaining: $171
-Roster Size: 20
+#5 - b'Bimmy on the bench'
+Manager: A N
+Total Salary: $224
+FAAB Remaining: $200
+Roster Size: 17
 
 Salary Breakdown by Source:
-  Keeper: $63 (5 players)
-  Draft: $104 (7 players)
-  FAAB Waiver: $37 (7 players)
+  Keeper: $216 (12 players)
+  Draft: $4 (3 players)
+  FAAB Waiver: $4 (1 players)
   Free Agent: $0 (1 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  Myles Turner              C        MIL      $51      Draft          
-  Michael Porter Jr.        SF,PF    BKN      $21      Keeper         
-  Desmond Bane              SG,SF    ORL      $18      Keeper         
-  Aaron Gordon              PF,C     DEN      $18      Draft          
-  Fred VanVleet             PG       HOU      $13      Draft          
-  Coby White                PG,SG    CHI      $12      Keeper         
-  Khris Middleton           SF,PF    WAS      $11      FAAB Waiver    
-  Ty Jerome                 SG       MEM      $11      Draft          
-  Franz Wagner              SF,PF    ORL      $10      Keeper         
-  Asa Newell                PF       ATL      $6       FAAB Waiver    
-  VJ Edgecombe              SG       PHI      $5       Draft          
-  Kentavious Caldwell-Pope  SG,SF    MEM      $5       FAAB Waiver    
-  Keaton Wallace            PG,SG    ATL      $5       FAAB Waiver    
-  Jake LaRavia              SF,PF    LAL      $5       FAAB Waiver    
-  Daniss Jenkins            PG       DET      $3       FAAB Waiver    
-  Noah Clowney              PF,C     BKN      $3       Draft          
-  Cedric Coward             SG,SF    MEM      $3       Draft          
-  Kel'el Ware               PF,C     MIA      $2       Keeper         
-  Cole Anthony              PG       MIL      $2       FAAB Waiver    
-  Craig Porter Jr.          PG,SG    CLE      $0       Free Agent     
+  James Harden              PG,SG    LAC      $63      Keeper         
+  Ivica Zubac               C        LAC      $30      Keeper         
+  Anfernee Simons           PG,SG    BOS      $24      Keeper         
+  OG Anunoby                SF,PF    NYK      $21      Keeper         
+  Jalen Johnson             SF,PF    ATL      $18      Keeper         
+  Paolo Banchero            PF,C     ORL      $16      Keeper         
+  Ausar Thompson            SG,SF,PF DET      $11      Keeper         
+  Walker Kessler            C        UTA      $10      Keeper         
+  Payton Pritchard          PG       BOS      $9       Keeper         
+  Ronald Holland II         SF,PF    DET      $8       Keeper         
+  Tristan da Silva          SF,PF    ORL      $4       FAAB Waiver    
+  Luke Kornet               C        SAS      $3       Keeper         
+  Kyshawn George            SG,SF    WAS      $3       Keeper         
+  Jay Huff                  C        IND      $2       Draft          
+  Gary Trent Jr.            SG,SF    MIL      $1       Draft          
+  Chris Paul                PG       LAC      $1       Draft          
+  Nick Richards             C        PHX      $0       Free Agent     
 --------------------------------------------------------------------------------
 
-#4 - b'Business Centaur'
+#6 - b'Plummeting Business Centaur'
+Manager: Pratap
+Total Salary: $223
+FAAB Remaining: $198
+Roster Size: 17
+
+Salary Breakdown by Source:
+  Keeper: $203 (12 players)
+  Draft: $19 (3 players)
+  FAAB Waiver: $1 (1 players)
+  Free Agent: $0 (1 players)
+
+Roster:
+  Player Name               Pos      NBA Team Salary   Source         
+  ---------------------------------------------------------------------------
+  Kevin Durant              SG,SF,PF HOU      $58      Keeper         
+  DeMar DeRozan             SF,PF    SAC      $35      Keeper         
+  Jamal Murray              PG,SG    DEN      $24      Keeper         
+  Jarrett Allen             C        CLE      $24      Keeper         
+  Naz Reid                  PF,C     MIN      $15      Keeper         
+  Keegan Murray             SF,PF    SAC      $15      Keeper         
+  Lonzo Ball                PG,SG    CLE      $9       Draft          
+  Bilal Coulibaly           SG,SF    WAS      $9       Keeper         
+  Zach Edey                 C        MEM      $8       Keeper         
+  Santi Aldama              PF,C     MEM      $6       Keeper         
+  Nickeil Alexander-Walker  PG,SG,SF ATL      $5       Draft          
+  Brook Lopez               C        LAC      $5       Draft          
+  Kasparas Jakučionis       PG       MIA      $3       Keeper         
+  Aaron Nesmith             SG,SF    IND      $3       Keeper         
+  Thomas Sorber             C        OKC      $3       Keeper         
+  Sandro Mamukelashvili     PF,C     TOR      $1       FAAB Waiver    
+  Isaac Okoro               SF,PF    CHI      $0       Free Agent     
+--------------------------------------------------------------------------------
+
+#7 - b'Business Centaur'
 Manager: TripleZero
-Total Salary: $202
+Total Salary: $222
 FAAB Remaining: $190
 Roster Size: 17
 
 Salary Breakdown by Source:
-  Keeper: $108 (8 players)
-  Draft: $88 (6 players)
+  Keeper: $141 (10 players)
+  Draft: $75 (4 players)
   FAAB Waiver: $6 (3 players)
   Free Agent: $0 (0 players)
 
@@ -189,99 +289,172 @@ Roster:
   ---------------------------------------------------------------------------
   Nikola Vučević            C        CHI      $44      Draft          
   Jaylen Brown              SG,SF    BOS      $33      Keeper         
-  Jakob Poeltl              C        TOR      $21      Keeper         
+  Jakob Poeltl              C        TOR      $24      Keeper         
   LaMelo Ball               PG,SG    CHA      $18      Keeper         
+  Jalen Green               PG,SG    PHX      $18      Keeper         
   RJ Barrett                SG,SF,PF TOR      $15      Draft          
-  Jalen Green               PG,SG    PHX      $13      Keeper         
+  Amen Thompson             PG,SG,SF HOU      $11      Keeper         
   Donte DiVincenzo          PG,SG    MIN      $9       Draft          
-  Amen Thompson             PG,SG,SF HOU      $8       Keeper         
-  Alex Caruso               SG,SF    OKC      $8       Draft          
+  Taylor Hendricks          SF,PF    UTA      $9       Keeper         
+  Zaccharie Risacher        SF,PF    ATL      $8       Keeper         
+  Alex Caruso               SG,SF    OKC      $8       Keeper         
+  Andrew Nembhard           PG,SG    IND      $7       Keeper         
   Neemias Queta             PF,C     BOS      $7       Draft          
-  Taylor Hendricks          SF,PF    UTA      $6       Keeper         
-  Zaccharie Risacher        SF,PF    ATL      $5       Keeper         
-  Collin Murray-Boyles      PF,C     TOR      $5       Draft          
-  Andrew Nembhard           PG,SG    IND      $4       Keeper         
+  Collin Murray-Boyles      PF,C     TOR      $5       Keeper         
   Ben Sheppard              SG,SF    IND      $3       FAAB Waiver    
   Mike Conley               PG       MIN      $2       FAAB Waiver    
   Buddy Hield               SG,SF    GSW      $1       FAAB Waiver    
 --------------------------------------------------------------------------------
 
-#5 - b'Plummeting Business Centaur'
-Manager: Pratap
-Total Salary: $201
-FAAB Remaining: $198
-Roster Size: 17
+#8 - b'Dimes & Nichols'
+Manager: Daniel
+Total Salary: $221
+FAAB Remaining: $171
+Roster Size: 20
 
 Salary Breakdown by Source:
-  Keeper: $167 (8 players)
-  Draft: $33 (7 players)
-  FAAB Waiver: $1 (1 players)
+  Keeper: $117 (9 players)
+  Draft: $67 (3 players)
+  FAAB Waiver: $37 (7 players)
   Free Agent: $0 (1 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  Kevin Durant              SG,SF,PF HOU      $58      Keeper         
-  DeMar DeRozan             SF,PF    SAC      $32      Keeper         
-  Jamal Murray              PG,SG    DEN      $21      Keeper         
-  Jarrett Allen             C        CLE      $21      Keeper         
-  Naz Reid                  PF,C     MIN      $12      Keeper         
-  Keegan Murray             SF,PF    SAC      $12      Keeper         
-  Lonzo Ball                PG,SG    CLE      $9       Draft          
-  Santi Aldama              PF,C     MEM      $6       Draft          
-  Bilal Coulibaly           SG,SF    WAS      $6       Keeper         
-  Nickeil Alexander-Walker  PG,SG,SF ATL      $5       Draft          
-  Brook Lopez               C        LAC      $5       Draft          
-  Zach Edey                 C        MEM      $5       Keeper         
-  Kasparas Jakučionis       PG       MIA      $3       Draft          
-  Aaron Nesmith             SG,SF    IND      $3       Draft          
-  Thomas Sorber             C        OKC      $2       Draft          
-  Sandro Mamukelashvili     PF,C     TOR      $1       FAAB Waiver    
-  Isaac Okoro               SF,PF    CHI      $0       Free Agent     
+  Myles Turner              C        MIL      $51      Draft          
+  Michael Porter Jr.        SF,PF    BKN      $24      Keeper         
+  Desmond Bane              SG,SF    ORL      $18      Keeper         
+  Franz Wagner              SF,PF    ORL      $18      Keeper         
+  Aaron Gordon              PF,C     DEN      $18      Keeper         
+  Coby White                PG,SG    CHI      $15      Keeper         
+  Fred VanVleet             PG       HOU      $13      Draft          
+  Khris Middleton           SF,PF    WAS      $11      FAAB Waiver    
+  Ty Jerome                 SG       MEM      $11      Keeper         
+  Asa Newell                PF       ATL      $6       FAAB Waiver    
+  VJ Edgecombe              SG       PHI      $5       Keeper         
+  Kentavious Caldwell-Pope  SG,SF    MEM      $5       FAAB Waiver    
+  Kel'el Ware               PF,C     MIA      $5       Keeper         
+  Keaton Wallace            PG,SG    ATL      $5       FAAB Waiver    
+  Jake LaRavia              SF,PF    LAL      $5       FAAB Waiver    
+  Daniss Jenkins            PG       DET      $3       FAAB Waiver    
+  Noah Clowney              PF,C     BKN      $3       Draft          
+  Cedric Coward             SG,SF    MEM      $3       Keeper         
+  Cole Anthony              PG       MIL      $2       FAAB Waiver    
+  Craig Porter Jr.          PG,SG    CLE      $0       Free Agent     
 --------------------------------------------------------------------------------
 
-#6 - b'Historically Juiced'
-Manager: Lord
-Total Salary: $200
-FAAB Remaining: $184
-Roster Size: 16
+#9 - b"Mark's Young Ant Dick"
+Manager: george
+Total Salary: $220
+FAAB Remaining: $195
+Roster Size: 17
 
 Salary Breakdown by Source:
-  Keeper: $175 (8 players)
-  Draft: $12 (4 players)
-  FAAB Waiver: $13 (4 players)
+  Keeper: $205 (11 players)
+  Draft: $15 (5 players)
+  FAAB Waiver: $0 (0 players)
+  Free Agent: $0 (1 players)
+
+Roster:
+  Player Name               Pos      NBA Team Salary   Source         
+  ---------------------------------------------------------------------------
+  Anthony Edwards           PG,SG    MIN      $33      Keeper         
+  Jayson Tatum              SF,PF    BOS      $33      Keeper         
+  Bam Adebayo               PF,C     MIA      $30      Keeper         
+  Zion Williamson           SF,PF,C  NOP      $27      Keeper         
+  Mark Williams             C        PHX      $25      Keeper         
+  Trae Young                PG       ATL      $24      Keeper         
+  Brandon Miller            SF,PF    CHA      $11      Keeper         
+  Isaiah Hartenstein        C        OKC      $9       Keeper         
+  Kyle Kuzma                SF,PF    MIL      $8       Draft          
+  Bub Carrington            PG,SG    WAS      $6       Keeper         
+  Nikola Jović              PF       MIA      $6       Keeper         
+  Cam Whitmore              SF,PF    WAS      $3       Draft          
+  Carter Bryant             SF       SAS      $2       Draft          
+  Miles Bridges             SF,PF    CHA      $1       Keeper         
+  Moussa Diabaté            C        CHA      $1       Draft          
+  Brice Sensabaugh          SF,PF    UTA      $1       Draft          
+  Noa Essengue              PF       CHI      $0       Free Agent     
+--------------------------------------------------------------------------------
+
+#10 - b"Denny's Optimal Team"
+Manager: Denny
+Total Salary: $219
+FAAB Remaining: $190
+Roster Size: 17
+
+Salary Breakdown by Source:
+  Keeper: $209 (12 players)
+  Draft: $1 (1 players)
+  FAAB Waiver: $9 (4 players)
   Free Agent: $0 (0 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  De'Aaron Fox              PG,SG    SAS      $33      Keeper         
-  Shai Gilgeous-Alexander   PG       OKC      $33      Keeper         
-  Jaren Jackson Jr.         PF,C     MEM      $27      Keeper         
-  Keldon Johnson            SF,PF    SAS      $21      Keeper         
-  Deandre Ayton             C        LAL      $21      Keeper         
-  Nic Claxton               C        BKN      $21      Keeper         
-  Shaedon Sharpe            SG,SF    POR      $12      Keeper         
-  Cam Thomas                SG,SF    BKN      $7       Keeper         
-  Dylan Harper              PG,SG    SAS      $5       Draft          
-  Isaiah Stewart            PF,C     DET      $4       FAAB Waiver    
-  Christian Braun           SG,SF    DEN      $4       Draft          
-  Collin Gillespie          PG       PHX      $4       FAAB Waiver    
-  Ajay Mitchell             PG,SG    OKC      $3       FAAB Waiver    
-  Jase Richardson           SG       ORL      $2       Draft          
-  Will Richard              SG       GSW      $2       FAAB Waiver    
-  Kelly Oubre Jr.           SF,PF    PHI      $1       Draft          
+  Stephen Curry             PG       GSW      $66      Keeper         
+  Lauri Markkanen           SF,PF    UTA      $33      Keeper         
+  Dejounte Murray           PG,SG    NOP      $24      Keeper         
+  Cade Cunningham           PG,SG    DET      $21      Keeper         
+  Darius Garland            PG       CLE      $21      Keeper         
+  Wendell Carter Jr.        C        ORL      $11      Keeper         
+  Norman Powell             SG,SF    MIA      $9       Keeper         
+  Davion Mitchell           PG       MIA      $6       Keeper         
+  Moses Moody               SG,SF    GSW      $6       Keeper         
+  Dillon Brooks             SF,PF    PHX      $5       Keeper         
+  Bennedict Mathurin        SG,SF    IND      $4       Keeper         
+  Harrison Barnes           SF,PF    SAS      $3       Keeper         
+  Ayo Dosunmu               SG,SF    CHI      $3       FAAB Waiver    
+  D'Angelo Russell          PG       DAL      $3       FAAB Waiver    
+  Al Horford                PF,C     GSW      $2       FAAB Waiver    
+  Aaron Wiggins             SG,SF    OKC      $1       Draft          
+  Scotty Pippen Jr.         PG,SG    MEM      $1       FAAB Waiver    
 --------------------------------------------------------------------------------
 
-#7 - b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
+#11 - b'LeDon'
+Manager: Samantics
+Total Salary: $217
+FAAB Remaining: $172
+Roster Size: 18
+
+Salary Breakdown by Source:
+  Keeper: $164 (10 players)
+  Draft: $42 (2 players)
+  FAAB Waiver: $11 (4 players)
+  Free Agent: $0 (2 players)
+
+Roster:
+  Player Name               Pos      NBA Team Salary   Source         
+  ---------------------------------------------------------------------------
+  LeBron James              SF,PF    LAL      $39      Draft          
+  Donovan Mitchell          PG,SG    CLE      $36      Keeper         
+  Luka Dončić               PG,SG    LAL      $33      Keeper         
+  Evan Mobley               PF,C     CLE      $24      Keeper         
+  Alperen Sengun            PF,C     HOU      $24      Keeper         
+  Josh Giddey               PG,SG    CHI      $18      Keeper         
+  Chet Holmgren             PF,C     OKC      $16      Keeper         
+  Mitchell Robinson         C        NYK      $7       FAAB Waiver    
+  Kon Knueppel              SG,SF    CHA      $5       Keeper         
+  De'Andre Hunter           SF,PF    CLE      $3       Draft          
+  Nique Clifford            SG       SAC      $3       Keeper         
+  Yang Hansen               C        POR      $3       Keeper         
+  Walter Clayton Jr.        PG       UTA      $2       Keeper         
+  Ryan Dunn                 SF,PF    PHX      $2       FAAB Waiver    
+  Isaiah Joe                SG       OKC      $1       FAAB Waiver    
+  Mouhamed Gueye            PF,C     ATL      $1       FAAB Waiver    
+  Terance Mann              SG,SF    BKN      $0       Free Agent     
+  Vít Krejčí                SG,SF    ATL      $0       Free Agent     
+--------------------------------------------------------------------------------
+
+#12 - b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80'
 Manager: Let’s Go Brandon
-Total Salary: $200
+Total Salary: $215
 FAAB Remaining: $174
 Roster Size: 20
 
 Salary Breakdown by Source:
-  Keeper: $85 (6 players)
-  Draft: $92 (6 players)
+  Keeper: $108 (8 players)
+  Draft: $84 (4 players)
   FAAB Waiver: $23 (5 players)
   Free Agent: $0 (3 players)
 
@@ -289,20 +462,20 @@ Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
   Kristaps Porziņģis        PF,C     ATL      $43      Draft          
+  Julius Randle             PF,C     MIN      $38      Keeper         
   Jimmy Butler III          SG,SF,PF GSW      $35      Draft          
-  Julius Randle             PF,C     MIN      $35      Keeper         
   Jordan Poole              PG,SG    NOP      $21      Keeper         
-  Jabari Smith Jr.          SF,PF,C  HOU      $13      Keeper         
+  Jabari Smith Jr.          SF,PF,C  HOU      $16      Keeper         
+  Scoot Henderson           PG       POR      $11      Keeper         
   Marcus Smart              PG,SG    LAL      $8       FAAB Waiver    
-  Scoot Henderson           PG       POR      $8       Keeper         
+  Alex Sarr                 C        WAS      $8       Keeper         
   Tre Mann                  PG,SG    CHA      $8       FAAB Waiver    
+  Bub Carrington            PG,SG    WAS      $6       Keeper         
   Miles McBride             PG,SG    NYK      $5       FAAB Waiver    
-  Ace Bailey                SG,SF    UTA      $5       Draft          
-  Alex Sarr                 C        WAS      $5       Keeper         
+  Ace Bailey                SG,SF    UTA      $5       Keeper         
   Max Christie              SG,SF    DAL      $3       Draft          
   T.J. McConnell            PG       IND      $3       Draft          
-  Kyle Filipowski           PF,C     UTA      $3       Draft          
-  Bub Carrington            PG,SG    WAS      $3       Keeper         
+  Kyle Filipowski           PF,C     UTA      $3       Keeper         
   Jordan Miller             SF       LAC      $1       FAAB Waiver    
   Isaiah Jackson            C        IND      $1       FAAB Waiver    
   Peyton Watson             SF,PF    DEN      $0       Free Agent     
@@ -310,30 +483,30 @@ Roster:
   Jarace Walker             SF,PF    IND      $0       Free Agent     
 --------------------------------------------------------------------------------
 
-#8 - b'The Best Ever'
+#13 - b'The Best Ever'
 Manager: Ace
-Total Salary: $199
+Total Salary: $214
 FAAB Remaining: $192
 Roster Size: 18
 
 Salary Breakdown by Source:
-  Keeper: $187 (7 players)
-  Draft: $6 (2 players)
+  Keeper: $208 (9 players)
+  Draft: $0 (0 players)
   FAAB Waiver: $6 (5 players)
   Free Agent: $0 (4 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  Kawhi Leonard             SF,PF    LAC      $49      Keeper         
+  Kawhi Leonard             SF,PF    LAC      $52      Keeper         
   Domantas Sabonis          C        SAC      $33      Keeper         
-  Pascal Siakam             PF,C     IND      $27      Keeper         
-  Derrick White             PG,SG    BOS      $21      Keeper         
-  Jalen Brunson             PG       NYK      $21      Keeper         
-  Devin Vassell             SG,SF    SAS      $18      Keeper         
+  Pascal Siakam             PF,C     IND      $30      Keeper         
+  Derrick White             PG,SG    BOS      $24      Keeper         
+  Jalen Brunson             PG       NYK      $24      Keeper         
+  Devin Vassell             SG,SF    SAS      $21      Keeper         
   Deni Avdija               SF,PF    POR      $18      Keeper         
-  Yves Missi                C        NOP      $3       Draft          
-  Egor Dëmin                PG       BKN      $3       Draft          
+  Yves Missi                C        NOP      $3       Keeper         
+  Egor Dëmin                PG       BKN      $3       Keeper         
   Bobby Portis              PF,C     MIL      $2       FAAB Waiver    
   Kris Dunn                 PG,SG    LAC      $1       FAAB Waiver    
   Justin Edwards            SF       PHI      $1       FAAB Waiver    
@@ -345,153 +518,83 @@ Roster:
   Sion James                SG       CHA      $0       Free Agent     
 --------------------------------------------------------------------------------
 
-#9 - b"Mark's Young Ant Dick"
-Manager: george
-Total Salary: $199
+#14 - b'Huskies'
+Manager: Justin
+Total Salary: $209
 FAAB Remaining: $195
 Roster Size: 17
 
 Salary Breakdown by Source:
-  Keeper: $184 (11 players)
-  Draft: $15 (5 players)
-  FAAB Waiver: $0 (0 players)
-  Free Agent: $0 (1 players)
+  Keeper: $200 (12 players)
+  Draft: $0 (0 players)
+  FAAB Waiver: $9 (3 players)
+  Free Agent: $0 (2 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  Jayson Tatum              SF,PF    BOS      $33      Keeper         
-  Anthony Edwards           PG,SG    MIN      $30      Keeper         
-  Bam Adebayo               PF,C     MIA      $27      Keeper         
-  Zion Williamson           SF,PF,C  NOP      $27      Keeper         
-  Mark Williams             C        PHX      $22      Keeper         
-  Trae Young                PG       ATL      $21      Keeper         
-  Kyle Kuzma                SF,PF    MIL      $8       Draft          
-  Brandon Miller            SF,PF    CHA      $8       Keeper         
-  Isaiah Hartenstein        C        OKC      $6       Keeper         
-  Miles Bridges             SF,PF    CHA      $4       Keeper         
-  Bub Carrington            PG,SG    WAS      $3       Keeper         
-  Nikola Jović              PF       MIA      $3       Keeper         
-  Cam Whitmore              SF,PF    WAS      $3       Draft          
-  Carter Bryant             SF       SAS      $2       Draft          
-  Moussa Diabaté            C        CHA      $1       Draft          
-  Brice Sensabaugh          SF,PF    UTA      $1       Draft          
-  Noa Essengue              PF       CHI      $0       Free Agent     
+  Anthony Davis             PF,C     DAL      $60      Keeper         
+  Joel Embiid               C        PHI      $44      Keeper         
+  Herbert Jones             SF,PF    NOP      $18      Keeper         
+  Jalen Suggs               PG,SG    ORL      $18      Keeper         
+  Jonathan Kuminga          SF,PF    GSW      $12      Keeper         
+  Jalen Williams            SF,PF    OKC      $12      Keeper         
+  Cason Wallace             PG,SG    OKC      $9       Keeper         
+  Reed Sheppard             PG,SG    HOU      $8       Keeper         
+  Nikola Topić              PG       OKC      $6       Keeper         
+  Rui Hachimura             SF,PF    LAL      $5       FAAB Waiver    
+  Tre Johnson               SG       WAS      $5       Keeper         
+  Khaman Maluach            C        PHX      $5       Keeper         
+  Simone Fontecchio         SF,PF    MIA      $3       FAAB Waiver    
+  Jaylen Wells              SG,SF    MEM      $3       Keeper         
+  Jusuf Nurkić              C        UTA      $1       FAAB Waiver    
+  Caris LeVert              SG,SF    DET      $0       Free Agent     
+  Goga Bitadze              C        ORL      $0       Free Agent     
 --------------------------------------------------------------------------------
 
-#10 - b"Denny's Optimal Team"
-Manager: Denny
-Total Salary: $199
-FAAB Remaining: $190
-Roster Size: 17
-
-Salary Breakdown by Source:
-  Keeper: $154 (6 players)
-  Draft: $36 (7 players)
-  FAAB Waiver: $9 (4 players)
-  Free Agent: $0 (0 players)
-
-Roster:
-  Player Name               Pos      NBA Team Salary   Source         
-  ---------------------------------------------------------------------------
-  Stephen Curry             PG       GSW      $63      Keeper         
-  Lauri Markkanen           SF,PF    UTA      $30      Keeper         
-  Darius Garland            PG       CLE      $21      Keeper         
-  Dejounte Murray           PG,SG    NOP      $21      Keeper         
-  Cade Cunningham           PG,SG    DET      $13      Keeper         
-  Wendell Carter Jr.        C        ORL      $11      Draft          
-  Davion Mitchell           PG       MIA      $6       Draft          
-  Norman Powell             SG,SF    MIA      $6       Keeper         
-  Moses Moody               SG,SF    GSW      $6       Draft          
-  Dillon Brooks             SF,PF    PHX      $5       Draft          
-  Bennedict Mathurin        SG,SF    IND      $4       Draft          
-  Harrison Barnes           SF,PF    SAS      $3       Draft          
-  Ayo Dosunmu               SG,SF    CHI      $3       FAAB Waiver    
-  D'Angelo Russell          PG       DAL      $3       FAAB Waiver    
-  Al Horford                PF,C     GSW      $2       FAAB Waiver    
-  Aaron Wiggins             SG,SF    OKC      $1       Draft          
-  Scotty Pippen Jr.         PG,SG    MEM      $1       FAAB Waiver    
---------------------------------------------------------------------------------
-
-#11 - b'Bimmy on the bench'
-Manager: A N
-Total Salary: $197
+#15 - b'Zesty Hoopers'
+Manager: Tyler
+Total Salary: $200
 FAAB Remaining: $200
 Roster Size: 17
 
 Salary Breakdown by Source:
-  Keeper: $153 (9 players)
-  Draft: $40 (6 players)
-  FAAB Waiver: $4 (1 players)
+  Keeper: $167 (11 players)
+  Draft: $32 (4 players)
+  FAAB Waiver: $1 (1 players)
   Free Agent: $0 (1 players)
 
 Roster:
   Player Name               Pos      NBA Team Salary   Source         
   ---------------------------------------------------------------------------
-  James Harden              PG,SG    LAC      $63      Keeper         
-  Ivica Zubac               C        LAC      $30      Draft          
-  Anfernee Simons           PG,SG    BOS      $21      Keeper         
-  OG Anunoby                SF,PF    NYK      $21      Keeper         
-  Paolo Banchero            PF,C     ORL      $13      Keeper         
-  Jalen Johnson             SF,PF    ATL      $9       Keeper         
-  Ausar Thompson            SG,SF,PF DET      $8       Keeper         
-  Walker Kessler            C        UTA      $7       Keeper         
-  Payton Pritchard          PG       BOS      $6       Keeper         
-  Ronald Holland II         SF,PF    DET      $5       Keeper         
-  Tristan da Silva          SF,PF    ORL      $4       FAAB Waiver    
-  Luke Kornet               C        SAS      $3       Draft          
-  Kyshawn George            SG,SF    WAS      $3       Draft          
-  Jay Huff                  C        IND      $2       Draft          
-  Gary Trent Jr.            SG,SF    MIL      $1       Draft          
-  Chris Paul                PG       LAC      $1       Draft          
-  Nick Richards             C        PHX      $0       Free Agent     
+  Tyrese Haliburton         PG,SG    IND      $30      Keeper         
+  Kyrie Irving              PG       DAL      $25      Draft          
+  Mikal Bridges             SG,SF,PF NYK      $24      Keeper         
+  Immanuel Quickley         PG,SG    TOR      $21      Keeper         
+  Scottie Barnes            SG,SF,PF TOR      $18      Keeper         
+  Josh Hart                 SG,SF,PF NYK      $14      Keeper         
+  Dyson Daniels             PG,SG,SF ATL      $14      Keeper         
+  Dereck Lively II          C        DAL      $11      Keeper         
+  Jeremy Sochan             PF,C     SAS      $11      Keeper         
+  Jared McCain              PG,SG    PHI      $8       Keeper         
+  Brandin Podziemski        PG,SG    GSW      $8       Keeper         
+  Matas Buzelis             SF,PF    CHI      $8       Keeper         
+  Gradey Dick               SG,SF    TOR      $5       Draft          
+  Russell Westbrook         PG,SG    SAC      $1       Draft          
+  Luguentz Dort             SG,SF    OKC      $1       FAAB Waiver    
+  Damian Lillard            PG       POR      $1       Draft          
+  Jalen Smith               C        CHI      $0       Free Agent     
 --------------------------------------------------------------------------------
 
-#12 - b'JD&TheStraightShot'
-Manager: Alon
-Total Salary: $194
-FAAB Remaining: $135
-Roster Size: 19
-
-Salary Breakdown by Source:
-  Keeper: $138 (8 players)
-  Draft: $33 (5 players)
-  FAAB Waiver: $23 (5 players)
-  Free Agent: $0 (1 players)
-
-Roster:
-  Player Name               Pos      NBA Team Salary   Source         
-  ---------------------------------------------------------------------------
-  Nikola Jokić              C        DEN      $63      Keeper         
-  Tyrese Maxey              PG       PHI      $24      Keeper         
-  Cameron Johnson           SF,PF    DEN      $13      FAAB Waiver    
-  Jrue Holiday              PG,SG    POR      $12      Draft          
-  Jaden Ivey                PG,SG    DET      $12      Keeper         
-  Austin Reaves             PG,SG,SF LAL      $10      Keeper         
-  Jalen Duren               C        DET      $10      Keeper         
-  Isaiah Collier            PG,SG    UTA      $10      Draft          
-  Tari Eason                SF,PF    HOU      $9       Keeper         
-  Trey Murphy III           SG,SF,PF NOP      $7       Keeper         
-  Toumani Camara            SF,PF    POR      $5       Draft          
-  Dennis Schröder           PG,SG    SAC      $4       FAAB Waiver    
-  P.J. Washington           SF,PF    DAL      $4       Draft          
-  Donovan Clingan           C        POR      $3       Keeper         
-  Svi Mykhailiuk            SG,SF    UTA      $3       FAAB Waiver    
-  Jock Landale              C        MEM      $2       FAAB Waiver    
-  Ryan Kalkbrenner          C        CHA      $2       Draft          
-  Paul Reed                 C        DET      $1       FAAB Waiver    
-  Andre Drummond            C        PHI      $0       Free Agent     
---------------------------------------------------------------------------------
-
-#13 - b'TO Squad'
+#16 - b'TO Squad'
 Manager: Da Kang
-Total Salary: $186
+Total Salary: $189
 FAAB Remaining: $142
 Roster Size: 18
 
 Salary Breakdown by Source:
-  Keeper: $90 (3 players)
-  Draft: $59 (5 players)
+  Keeper: $123 (7 players)
+  Draft: $29 (1 players)
   FAAB Waiver: $37 (7 players)
   Free Agent: $0 (3 players)
 
@@ -501,124 +604,21 @@ Roster:
   Karl-Anthony Towns        PF,C     NYK      $63      Keeper         
   Paul George               SG,SF,PF PHI      $29      Draft          
   Tyler Herro               PG,SG    MIA      $21      Keeper         
-  Daniel Gafford            C        DAL      $13      Draft          
+  Daniel Gafford            C        DAL      $13      Keeper         
   Grayson Allen             SG,SF    PHX      $10      FAAB Waiver    
-  Jaden McDaniels           SF,PF    MIN      $9       Draft          
+  Jaden McDaniels           SF,PF    MIN      $9       Keeper         
+  Keyonte George            PG,SG    UTA      $9       Keeper         
   Ryan Rollins              PG,SG    MIL      $8       FAAB Waiver    
   Naji Marshall             SF,PF    DAL      $6       FAAB Waiver    
-  Keyonte George            PG,SG    UTA      $6       Keeper         
   Josh Minott               SF,PF    BOS      $6       FAAB Waiver    
-  Cooper Flagg              PG,SF    DAL      $5       Draft          
+  Cooper Flagg              PG,SF    DAL      $5       Keeper         
   Kevin Huerter             SG,SF    CHI      $4       FAAB Waiver    
-  Jeremiah Fears            PG       NOP      $3       Draft          
+  Jeremiah Fears            PG       NOP      $3       Keeper         
   Luke Kennard              PG,SG    ATL      $2       FAAB Waiver    
   Josh Okogie               SG,SF    HOU      $1       FAAB Waiver    
   Steven Adams              C        HOU      $0       Free Agent     
   Jamal Shead               PG       TOR      $0       Free Agent     
   AJ Green                  PG,SG    MIL      $0       Free Agent     
---------------------------------------------------------------------------------
-
-#14 - b'LeDon'
-Manager: Samantics
-Total Salary: $181
-FAAB Remaining: $172
-Roster Size: 18
-
-Salary Breakdown by Source:
-  Keeper: $115 (6 players)
-  Draft: $55 (6 players)
-  FAAB Waiver: $11 (4 players)
-  Free Agent: $0 (2 players)
-
-Roster:
-  Player Name               Pos      NBA Team Salary   Source         
-  ---------------------------------------------------------------------------
-  LeBron James              SF,PF    LAL      $39      Draft          
-  Donovan Mitchell          PG,SG    CLE      $33      Keeper         
-  Luka Dončić               PG,SG    LAL      $33      Keeper         
-  Chet Holmgren             PF,C     OKC      $13      Keeper         
-  Evan Mobley               PF,C     CLE      $13      Keeper         
-  Alperen Sengun            PF,C     HOU      $12      Keeper         
-  Josh Giddey               PG,SG    CHI      $11      Keeper         
-  Mitchell Robinson         C        NYK      $7       FAAB Waiver    
-  Kon Knueppel              SG,SF    CHA      $5       Draft          
-  De'Andre Hunter           SF,PF    CLE      $3       Draft          
-  Nique Clifford            SG       SAC      $3       Draft          
-  Yang Hansen               C        POR      $3       Draft          
-  Walter Clayton Jr.        PG       UTA      $2       Draft          
-  Ryan Dunn                 SF,PF    PHX      $2       FAAB Waiver    
-  Isaiah Joe                SG       OKC      $1       FAAB Waiver    
-  Mouhamed Gueye            PF,C     ATL      $1       FAAB Waiver    
-  Terance Mann              SG,SF    BKN      $0       Free Agent     
-  Vít Krejčí                SG,SF    ATL      $0       Free Agent     
---------------------------------------------------------------------------------
-
-#15 - b'Huskies'
-Manager: Justin
-Total Salary: $176
-FAAB Remaining: $195
-Roster Size: 17
-
-Salary Breakdown by Source:
-  Keeper: $154 (9 players)
-  Draft: $13 (3 players)
-  FAAB Waiver: $9 (3 players)
-  Free Agent: $0 (2 players)
-
-Roster:
-  Player Name               Pos      NBA Team Salary   Source         
-  ---------------------------------------------------------------------------
-  Anthony Davis             PF,C     DAL      $63      Keeper         
-  Joel Embiid               C        PHI      $41      Keeper         
-  Jalen Suggs               PG,SG    ORL      $15      Keeper         
-  Jonathan Kuminga          SF,PF    GSW      $11      Keeper         
-  Herbert Jones             SF,PF    NOP      $9       Keeper         
-  Cason Wallace             PG,SG    OKC      $6       Keeper         
-  Reed Sheppard             PG,SG    HOU      $5       Keeper         
-  Rui Hachimura             SF,PF    LAL      $5       FAAB Waiver    
-  Tre Johnson               SG       WAS      $5       Draft          
-  Khaman Maluach            C        PHX      $5       Draft          
-  Simone Fontecchio         SF,PF    MIA      $3       FAAB Waiver    
-  Jaylen Wells              SG,SF    MEM      $3       Draft          
-  Nikola Topić              PG       OKC      $3       Keeper         
-  Jusuf Nurkić              C        UTA      $1       FAAB Waiver    
-  Jalen Williams            SF,PF    OKC      $1       Keeper         
-  Caris LeVert              SG,SF    DET      $0       Free Agent     
-  Goga Bitadze              C        ORL      $0       Free Agent     
---------------------------------------------------------------------------------
-
-#16 - b'Zesty Hoopers'
-Manager: Tyler
-Total Salary: $171
-FAAB Remaining: $200
-Roster Size: 17
-
-Salary Breakdown by Source:
-  Keeper: $124 (10 players)
-  Draft: $46 (5 players)
-  FAAB Waiver: $1 (1 players)
-  Free Agent: $0 (1 players)
-
-Roster:
-  Player Name               Pos      NBA Team Salary   Source         
-  ---------------------------------------------------------------------------
-  Tyrese Haliburton         PG,SG    IND      $30      Keeper         
-  Kyrie Irving              PG       DAL      $25      Draft          
-  Mikal Bridges             SG,SF,PF NYK      $21      Keeper         
-  Immanuel Quickley         PG,SG    TOR      $18      Keeper         
-  Josh Hart                 SG,SF,PF NYK      $14      Draft          
-  Scottie Barnes            SG,SF,PF TOR      $12      Keeper         
-  Jeremy Sochan             PF,C     SAS      $11      Keeper         
-  Dyson Daniels             PG,SG,SF ATL      $11      Keeper         
-  Dereck Lively II          C        DAL      $8       Keeper         
-  Brandin Podziemski        PG,SG    GSW      $5       Keeper         
-  Matas Buzelis             SF,PF    CHI      $5       Keeper         
-  Gradey Dick               SG,SF    TOR      $5       Draft          
-  Jared McCain              PG,SG    PHI      $3       Keeper         
-  Russell Westbrook         PG,SG    SAC      $1       Draft          
-  Luguentz Dort             SG,SF    OKC      $1       FAAB Waiver    
-  Damian Lillard            PG       POR      $1       Draft          
-  Jalen Smith               C        CHI      $0       Free Agent     
 
 ================================================================================
                                  END OF REPORT                                  
