@@ -1,0 +1,74 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library) to interact with Yahoo Fantasy Basketball data.
+
+## Development Setup
+
+**Python Version**: 3.12
+
+**Package Manager**: uv (modern Python package manager)
+
+**Virtual Environment**: `.venv/` (automatically managed by uv)
+
+**Environment Configuration**:
+- `.env` file contains API credentials (NEVER commit this file)
+- Required environment variables:
+  - `YAHOO_CONSUMER_KEY`: Yahoo Fantasy Sports API credentials
+  - Additional API keys may be present for other services
+
+## Common Commands
+
+### Running the Application
+```bash
+uv run main.py
+```
+
+### Managing Dependencies
+```bash
+# Add a new dependency
+uv add <package-name>
+
+# Remove a dependency
+uv remove <package-name>
+
+# Sync dependencies from pyproject.toml
+uv sync
+
+# Show installed packages
+uv pip list
+```
+
+### Python Environment
+```bash
+# Activate virtual environment (if needed)
+source .venv/bin/activate
+
+# Run Python scripts with uv
+uv run python <script.py>
+```
+
+## Project Structure
+
+Currently a minimal structure with:
+- `main.py`: Entry point for the application
+- `pyproject.toml`: Project metadata and dependencies
+- `uv.lock`: Locked dependency versions (committed to git)
+- `.env`: Environment variables for API keys (gitignored)
+
+## Key Dependencies
+
+- **yfpy** (v17.0.0+): Yahoo Fantasy Sports Python library for accessing Yahoo Fantasy API
+  - Handles OAuth authentication with Yahoo
+  - Provides data models for fantasy sports data
+  - Depends on: python-dotenv, requests, stringcase, yahoo-oauth
+
+## Development Notes
+
+- This project uses `uv` instead of pip/poetry for faster dependency management
+- The `.python-version` file pins Python to 3.12
+- API credentials are stored in `.env` and loaded via python-dotenv (included with yfpy)
+- The project is in early stages with minimal implementation
