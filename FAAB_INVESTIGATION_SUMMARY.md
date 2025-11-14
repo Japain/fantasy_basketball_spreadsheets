@@ -115,33 +115,36 @@ for transaction in transactions:
 
 ## Implementation Confirmed
 
-The **3-priority salary retrieval strategy** is fully validated:
+The **salary retrieval strategy** is fully validated with the following priority order:
 
-### Priority 1: Keeper Cost ✅
+**Key Principle**: A player's **current salary** = **most recent acquisition cost**. FAAB waiver acquisitions override keeper/draft costs.
+
+### Priority 1: FAAB Waiver Acquisition ✅ **TAKES PRECEDENCE**
 ```python
-if player.is_keeper.get('status') and player.is_keeper.get('cost') is not None:
+if player.player_key in faab_cost_map:
+    salary = faab_cost_map[player.player_key]  # Most recent FAAB bid
+```
+- **Result**: 3 players on test team
+- **Note**: Uses most recent transaction if player has multiple acquisitions
+
+### Priority 2: Keeper Cost ✅
+```python
+elif player.is_keeper.get('status') and player.is_keeper.get('cost') is not None:
     salary = player.is_keeper['cost']
 ```
-- **Result**: 9 players on test team
+- **Result**: 9 players on test team (without FAAB acquisitions)
 
-### Priority 2: Draft Cost ✅
+### Priority 3: Draft Cost ✅
 ```python
 elif player.player_key in draft_cost_map:
     salary = draft_cost_map[player.player_key]
 ```
-- **Result**: 5 players on test team
-
-### Priority 3: FAAB Bid ✅ **CONFIRMED**
-```python
-elif player.player_key in faab_cost_map:
-    salary = faab_cost_map[player.player_key]
-```
-- **Result**: 3 players on test team
+- **Result**: 5 players on test team (without FAAB or keeper)
 
 ### Priority 4: Free Agent
 ```python
 else:
-    salary = 0  # Free agent pickup
+    salary = 0  # Free agent pickup (no cost)
 ```
 - **Result**: 0 players on test team (100% coverage!)
 
@@ -153,12 +156,17 @@ else:
 
 ```python
 def build_faab_cost_map(transactions):
-    """Build mapping of player_key to FAAB acquisition cost."""
+    """
+    Build mapping of player_key to FAAB acquisition cost.
+
+    For players with multiple acquisitions, keeps only the MOST RECENT one.
+    """
     player_faab_map = {}
 
     for transaction in transactions:
         faab_bid = getattr(transaction, 'faab_bid', None)
         status = getattr(transaction, 'status', '')
+        timestamp = getattr(transaction, 'timestamp', 0)
 
         # Only count successful transactions with FAAB bids
         if status != 'successful' or not faab_bid or faab_bid <= 0:
@@ -178,11 +186,12 @@ def build_faab_cost_map(transactions):
                 if dest_type == 'team' and source_type in ['waivers', 'freeagents']:
                     player_key = getattr(player, 'player_key', None)
                     if player_key:
-                        # Keep highest FAAB bid (in case of multiple acquisitions)
-                        if player_key not in player_faab_map or faab_bid > player_faab_map[player_key]:
-                            player_faab_map[player_key] = faab_bid
+                        # Keep most recent FAAB bid (highest timestamp)
+                        if player_key not in player_faab_map or timestamp > player_faab_map[player_key][1]:
+                            player_faab_map[player_key] = (faab_bid, timestamp)
 
-    return player_faab_map
+    # Return simplified map with just the FAAB cost (remove timestamp)
+    return {player_key: cost for player_key, (cost, _) in player_faab_map.items()}
 ```
 
 ### Usage in League Data Extraction:
@@ -195,7 +204,23 @@ league_info = fetcher.get_league_info()
 draft_cost_map = {result.player_key: result.cost for result in league_info.draft_results}
 faab_cost_map = build_faab_cost_map(league_info.transactions)
 
-# Get player salary
+# Get player salary (FAAB takes priority!)
+def get_player_salary(player, draft_cost_map, faab_cost_map):
+    # Priority 1: FAAB waiver acquisition (most recent)
+    if player.player_key in faab_cost_map:
+        return faab_cost_map[player.player_key]
+
+    # Priority 2: Keeper cost
+    if player.is_keeper.get('status') and player.is_keeper.get('cost') is not None:
+        return player.is_keeper['cost']
+
+    # Priority 3: Draft cost
+    if player.player_key in draft_cost_map:
+        return draft_cost_map[player.player_key]
+
+    # Priority 4: Free agent
+    return 0
+
 salary = get_player_salary(player, draft_cost_map, faab_cost_map)
 ```
 

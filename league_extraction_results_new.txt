@@ -1,0 +1,89 @@
+Starting league data extraction test...
+Results will be written to: league_extraction_results.txt
+
+1. Initializing Yahoo Data Fetcher...
+INFO: Initializing Yahoo API client for league 68958
+INFO: Yahoo API client initialized successfully
+2. Extracting complete league data (this may take a moment)...
+INFO: Starting complete league data extraction...
+INFO: Fetching league information...
+INFO: Successfully retrieved league info: b'Squad Goals'
+INFO: Current week: 4
+INFO: Building draft cost mapping...
+INFO: Building FAAB cost mapping from transactions...
+INFO: Processing 16 teams...
+INFO: Fetching roster for team 1 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Historically Juiced': 16 players, $200 total
+INFO: Fetching roster for team 2 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Zesty Hoopers': 17 players, $171 total
+INFO: Fetching roster for team 3 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b"Ja's Rebuild": 14 players, $215 total
+INFO: Fetching roster for team 4 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'LeDon': 18 players, $181 total
+INFO: Fetching roster for team 5 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Plummeting Business Centaur': 17 players, $201 total
+INFO: Fetching roster for team 6 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Business Centaur': 17 players, $202 total
+INFO: Fetching roster for team 7 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Dimes & Nichols': 20 players, $204 total
+INFO: Fetching roster for team 8 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Huskies': 17 players, $176 total
+INFO: Fetching roster for team 9 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'JD&TheStraightShot': 19 players, $194 total
+INFO: Fetching roster for team 10 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'To the Victor go the Spoils': 18 players, $233 total
+INFO: Fetching roster for team 11 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Nash\xe2\x80\x99s\xf0\x9f\x94\xa5 \xf0\x9f\x9a\x80': 20 players, $200 total
+INFO: Fetching roster for team 12 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'The Best Ever': 18 players, $199 total
+INFO: Fetching roster for team 13 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'Bimmy on the bench': 17 players, $197 total
+INFO: Fetching roster for team 14 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b"Mark's Young Ant Dick": 17 players, $199 total
+INFO: Fetching roster for team 15 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b'TO Squad': 18 players, $186 total
+INFO: Fetching roster for team 16 week 4
+INFO: Successfully retrieved roster with 5 players
+INFO:   ✓ b"Denny's Optimal Team": 17 players, $199 total
+INFO: League data extraction complete!
+INFO:   Total players: 280
+INFO:   Average roster size: 17.5
+INFO:   Total salary spent: $3157
+INFO:   Average salary per team: $197.31
+   ✓ Extracted data for 16 teams
+3. Validating league data...
+INFO: Validating league data for: b'Squad Goals'
+INFO: ✓ League data validation passed with no issues
+   ✓ Validation passed!
+4. Generating summary statistics...
+5. Writing results to league_extraction_results.txt...
+
+✓ Results successfully written to league_extraction_results.txt
+
+============================================================
+EXTRACTION SUMMARY
+============================================================
+League: b'Squad Goals'
+Teams: 16
+Total Players: 280
+Total Salary Spent: $3157
+Validation: PASSED ✓
+
+============================================================
+Full details available in: league_extraction_results.txt
+============================================================

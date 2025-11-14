@@ -119,31 +119,41 @@ Can be used to track acquisition costs for players obtained via waivers/free age
 
 For each player on a team's roster, determine salary using this **priority order**:
 
-### Priority 1: Keeper Cost
+**Key Principle**: A player's **current salary** reflects their **most recent acquisition cost**. If a player was dropped and re-acquired via FAAB, their FAAB cost becomes their current salary, overriding their original keeper or draft cost.
+
+### Priority 1: Waiver/Free Agent Acquisition (Most Recent)
 ```python
-if player.is_keeper['status'] and player.is_keeper['cost'] is not None:
+# Check transaction history for FAAB bid
+# If found in transactions with faab_bid > 0:
+    salary = faab_bid_amount  # From most recent acquisition
+```
+**Note**: If a player has multiple waiver acquisitions, use only the **most recent** transaction's FAAB bid.
+
+### Priority 2: Keeper Cost
+```python
+elif player.is_keeper['status'] and player.is_keeper['cost'] is not None:
     salary = player.is_keeper['cost']
 ```
 
-### Priority 2: Draft Auction Cost
+### Priority 3: Draft Auction Cost
 ```python
 elif player.player_key in draft_results_map:
     salary = draft_results_map[player.player_key]['cost']
 ```
 
-### Priority 3: Waiver/Free Agent Acquisition
+### Priority 4: Free Agent (No Cost)
 ```python
-# Check transaction history for FAAB bid
-# If found in transactions with faab_bid > 0:
-    salary = faab_bid_amount
-# else:
+else:
     salary = 0  # Free agent pickup (no cost)
 ```
 
-### Priority 4: Unknown
-```python
-salary = None  # or 0, or mark as "N/A"
-```
+### Implementation Logic Flow:
+1. **First**: Check if player has any waiver acquisitions in transaction history
+   - If yes, use the **most recent** FAAB bid as salary
+   - This overrides any keeper or draft cost
+2. **Second**: If no waiver acquisition, check keeper cost
+3. **Third**: If not a keeper, check draft auction cost
+4. **Fourth**: If none of the above, salary is $0 (free agent)
 
 ---
 
@@ -271,17 +281,20 @@ def build_faab_cost_map(transactions):
     """
     Build mapping of player_key to FAAB acquisition cost.
 
+    For players with multiple acquisitions, keeps only the MOST RECENT one.
+
     Args:
         transactions: List of transaction objects from league_info.transactions
 
     Returns:
-        Dict mapping player_key to FAAB cost
+        Dict mapping player_key to tuple of (FAAB cost, timestamp)
     """
     player_faab_map = {}
 
     for transaction in transactions:
         faab_bid = getattr(transaction, 'faab_bid', None)
         status = getattr(transaction, 'status', '')
+        timestamp = getattr(transaction, 'timestamp', 0)
 
         # Only count successful transactions with FAAB bids
         if status != 'successful' or not faab_bid or faab_bid <= 0:
@@ -301,11 +314,12 @@ def build_faab_cost_map(transactions):
                 if dest_type == 'team' and source_type in ['waivers', 'freeagents']:
                     player_key = getattr(player, 'player_key', None)
                     if player_key:
-                        # Keep highest FAAB bid for this player (in case of multiple acquisitions)
-                        if player_key not in player_faab_map or faab_bid > player_faab_map[player_key]:
-                            player_faab_map[player_key] = faab_bid
+                        # Keep most recent FAAB bid (highest timestamp)
+                        if player_key not in player_faab_map or timestamp > player_faab_map[player_key][1]:
+                            player_faab_map[player_key] = (faab_bid, timestamp)
 
-    return player_faab_map
+    # Return simplified map with just the FAAB cost (remove timestamp)
+    return {player_key: cost for player_key, (cost, _) in player_faab_map.items()}
 ```
 
 ### 2. Create Player-Salary Mapping Function
@@ -313,27 +327,33 @@ def build_faab_cost_map(transactions):
 ```python
 def get_player_salary(player, draft_cost_map, faab_cost_map):
     """
-    Get salary for a player using 3-priority strategy.
+    Get salary for a player using priority strategy.
+
+    Priority order:
+    1. Most recent FAAB waiver acquisition (overrides keeper/draft)
+    2. Keeper cost
+    3. Draft auction cost
+    4. Free agent ($0)
 
     Args:
         player: Player object from roster
         draft_cost_map: Dict mapping player_key to draft cost
-        faab_cost_map: Dict mapping player_key to FAAB cost
+        faab_cost_map: Dict mapping player_key to FAAB cost (most recent)
 
     Returns:
         int: Player salary, or 0 if free agent
     """
-    # Priority 1: Check keeper cost first
+    # Priority 1: Check FAAB waiver acquisition FIRST (most recent takes priority)
+    if player.player_key in faab_cost_map:
+        return faab_cost_map[player.player_key]
+
+    # Priority 2: Check keeper cost
     if player.is_keeper.get('status') and player.is_keeper.get('cost') is not None:
         return player.is_keeper['cost']
 
-    # Priority 2: Check draft cost
+    # Priority 3: Check draft cost
     if player.player_key in draft_cost_map:
         return draft_cost_map[player.player_key]
-
-    # Priority 3: Check FAAB bids
-    if player.player_key in faab_cost_map:
-        return faab_cost_map[player.player_key]
 
     # Priority 4: Free agent (no cost)
     return 0
@@ -418,6 +438,13 @@ def extract_league_data():
 ### 4. Mid-Season Trades
 - Traded players might show different team in draft results vs. current roster
 - Salary should remain the same (original draft/keeper cost)
+- Exception: If player was dropped and re-acquired via FAAB, use FAAB cost
+
+### 6. Players with Multiple Acquisitions
+- A player might be drafted, dropped, then re-acquired via FAAB
+- Use the **most recent** acquisition cost (FAAB takes priority)
+- If multiple FAAB acquisitions, use the **most recent** timestamp
+- This ensures salary reflects current acquisition cost, not historical cost
 
 ### 5. Team Name Encoding
 - Team names appear as bytes (e.g., `b'Historically Juiced'`)
