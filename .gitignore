@@ -14,3 +14,9 @@ wheels/
 
 # Credentials and secrets
 client_secret_*.json
+credentials/
+token.json
+*.token
+
+# Yahoo API cache
+league_data/

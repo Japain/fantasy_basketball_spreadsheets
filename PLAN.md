@@ -52,7 +52,7 @@ from yfpy.query import YahooFantasySportsQuery
 yahoo_query = YahooFantasySportsQuery(
     league_dir="league_data",  # Cache directory
     game_code="nba",
-    game_id="449",  # Current NBA season
+    game_id="466",  # Current NBA season
     league_id="YOUR_LEAGUE_ID",
     yahoo_consumer_key=YAHOO_CONSUMER_KEY,
     yahoo_consumer_secret=YAHOO_CONSUMER_SECRET

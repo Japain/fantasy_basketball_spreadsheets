@@ -3,23 +3,23 @@
 ## Phase 1: Foundation & Discovery
 
 ### Project Setup
-- [ ] Create `src/` directory structure
-- [ ] Create `tests/` directory structure
-- [ ] Create `credentials/` directory (gitignored)
-- [ ] Update `.gitignore` to include:
+- [x] Create `src/` directory structure
+- [x] Create `tests/` directory structure
+- [x] Create `credentials/` directory (gitignored)
+- [x] Update `.gitignore` to include:
   - `league_data/`
   - `credentials/`
   - `token.json`
   - `*.token`
-- [ ] Create `src/__init__.py`
-- [ ] Create `tests/__init__.py`
-- [ ] Create `config.py` for centralized configuration
+- [x] Create `src/__init__.py`
+- [x] Create `tests/__init__.py`
+- [x] Create `config.py` for centralized configuration
 
 ### Yahoo API Setup & Investigation
 - [ ] Set up Yahoo OAuth credentials in `.env`
   - [ ] Add `YAHOO_CONSUMER_SECRET` (key already exists)
-  - [ ] Add `NBA_LEAGUE_ID`
-  - [ ] Add `NBA_GAME_ID` (current season)
+  - [ ] Add `NBA_LEAGUE_ID` (already exists)
+  - [ ] Add `NBA_GAME_ID` (already exists)
 - [ ] Create `src/logger.py` with basic logging configuration
 - [ ] Create initial `src/yahoo_data_fetcher.py` with authentication setup
 - [ ] Test Yahoo API authentication (initial OAuth flow)
@@ -210,8 +210,10 @@
 
 ## Current Status
 
-**Phase**: Not Started
+**Phase**: Phase 1: Foundation & Discovery (In Progress)
 **Last Updated**: 2025-11-14
+**Completed**: Project Setup
+**Next**: Yahoo API Setup & Investigation
 **Blockers**: None
 
 ## Notes
