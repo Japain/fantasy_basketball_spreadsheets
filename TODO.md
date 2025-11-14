@@ -16,22 +16,28 @@
 - [x] Create `config.py` for centralized configuration
 
 ### Yahoo API Setup & Investigation
-- [ ] Set up Yahoo OAuth credentials in `.env`
-  - [ ] Add `YAHOO_CONSUMER_SECRET` (key already exists)
-  - [ ] Add `NBA_LEAGUE_ID` (already exists)
-  - [ ] Add `NBA_GAME_ID` (already exists)
-- [ ] Create `src/logger.py` with basic logging configuration
-- [ ] Create initial `src/yahoo_data_fetcher.py` with authentication setup
-- [ ] Test Yahoo API authentication (initial OAuth flow)
-- [ ] **CRITICAL**: Investigate salary data availability
-  - [ ] Retrieve and inspect league info (`get_league_info()`)
-  - [ ] Inspect league teams (`get_league_teams()`)
-  - [ ] Examine team roster data structure (`get_team_roster_by_week()`)
-  - [ ] Check draft results for auction prices (`get_league_draft_results()`)
-  - [ ] Inspect player model for salary/contract fields
-  - [ ] Check team budget fields (`auction_budget_total`, `auction_budget_spent`)
-  - [ ] Document findings on how to obtain salary data
-  - [ ] Determine fallback strategy if needed
+- [x] Set up Yahoo OAuth credentials in `.env`
+  - [x] Add `YAHOO_CONSUMER_SECRET` (key already exists)
+  - [x] Add `NBA_LEAGUE_ID` (already exists)
+  - [x] Add `NBA_GAME_ID` (already exists)
+- [x] Create `src/logger.py` with basic logging configuration
+- [x] Create initial `src/yahoo_data_fetcher.py` with authentication setup
+- [x] Test Yahoo API authentication (initial OAuth flow)
+- [x] Reorganize authentication scripts into `src/auth/` folder
+  - [x] Create `src/auth/__init__.py`
+  - [x] Move auth scripts to `src/auth/`
+  - [x] Create `src/auth/README.md` with documentation
+  - [x] Update imports to work from new location
+  - [x] Update PLAN.md and CLAUDE.md with new structure
+- [x] **CRITICAL**: Investigate salary data availability
+  - [x] Retrieve and inspect league info (`get_league_info()`)
+  - [x] Inspect league teams (`get_league_teams()`)
+  - [x] Examine team roster data structure (`get_team_roster_by_week()`)
+  - [x] Check draft results for auction prices (`get_league_draft_results()`)
+  - [x] Inspect player model for salary/contract fields
+  - [x] Check team budget fields (found `faab_balance` on teams)
+  - [x] Document findings on how to obtain salary data
+  - [x] Determine fallback strategy (not needed - data available!)
 
 ### Data Model Definition
 - [ ] Based on API investigation, define data structures in `src/data_models.py`:
@@ -210,11 +216,32 @@
 
 ## Current Status
 
-**Phase**: Phase 1: Foundation & Discovery (In Progress)
+**Phase**: Phase 1: Foundation & Discovery ✅ COMPLETE
 **Last Updated**: 2025-11-14
-**Completed**: Project Setup
-**Next**: Yahoo API Setup & Investigation
+**Completed**:
+- ✅ Project Setup (directories, config, .gitignore)
+- ✅ Yahoo OAuth Authentication Setup & Testing
+- ✅ Authentication Code Organization (moved to src/auth/)
+- ✅ Successfully authenticated with Yahoo API
+- ✅ Retrieved basic league info (Squad Goals, League ID: 68958, 16 teams, Season 2025)
+- ✅ **CRITICAL Salary Data Investigation COMPLETE**
+  - ✅ Salary data IS available through Yahoo API
+  - ✅ Found three sources: keeper costs, draft auction prices, FAAB bids
+  - ✅ Comprehensive findings documented in SALARY_DATA_FINDINGS.md
+  - ✅ Implementation strategy defined
+
+**Next**: Phase 2 - Yahoo Data Retrieval Implementation
+- Define data models in `src/data_models.py`
+- Implement salary retrieval logic in data fetcher
+- Build data processing and validation
+
 **Blockers**: None
+
+**Notes**:
+- This is a **keeper league** - players have keeper costs from previous seasons
+- Salary = keeper cost (priority 1) OR draft cost (priority 2) OR FAAB bid (priority 3)
+- See SALARY_DATA_FINDINGS.md for complete documentation
+- Investigation scripts: `investigate_salary_data.py` and `investigate_roster.py`
 
 ## Notes
 

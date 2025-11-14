@@ -345,10 +345,17 @@ fantasy_basketball/
 ├── README.md
 ├── CLAUDE.md
 ├── PLAN.md
+├── TODO.md
 ├── main.py                       # Application entry point
 ├── config.py                     # Configuration management
 ├── src/
 │   ├── __init__.py
+│   ├── auth/                    # Authentication utilities
+│   │   ├── __init__.py
+│   │   ├── README.md           # Auth documentation
+│   │   ├── auth_with_code.py   # OAuth completion script
+│   │   ├── test_auth.py        # Interactive auth test
+│   │   └── complete_auth.py    # OAuth helper
 │   ├── yahoo_data_fetcher.py    # Yahoo API integration
 │   ├── data_processor.py        # Data transformation
 │   ├── google_auth.py           # Google authentication

@@ -54,11 +54,25 @@ uv run python <script.py>
 
 ## Project Structure
 
-Currently a minimal structure with:
-- `main.py`: Entry point for the application
-- `pyproject.toml`: Project metadata and dependencies
-- `uv.lock`: Locked dependency versions (committed to git)
-- `.env`: Environment variables for API keys (gitignored)
+```
+fantasy_basketball/
+├── config.py                 # Configuration management
+├── main.py                   # Application entry point
+├── src/
+│   ├── auth/                # OAuth authentication utilities
+│   │   ├── auth_with_code.py   # Primary auth script for headless environments
+│   │   ├── test_auth.py        # Interactive auth test
+│   │   └── complete_auth.py    # OAuth helper
+│   ├── yahoo_data_fetcher.py   # Yahoo API integration
+│   ├── logger.py               # Logging configuration
+│   └── (future modules: data_processor, google_auth, document_generator)
+├── tests/                   # Test suite
+├── credentials/             # API credentials (gitignored)
+├── league_data/             # Yahoo API cache (gitignored)
+├── .env                     # Environment variables (gitignored)
+├── pyproject.toml           # Project metadata and dependencies
+└── uv.lock                  # Locked dependency versions
+```
 
 ## Key Dependencies
 
@@ -73,3 +87,17 @@ Currently a minimal structure with:
 - The `.python-version` file pins Python to 3.12
 - API credentials are stored in `.env` and loaded via python-dotenv (included with yfpy)
 - The project is in early stages with minimal implementation
+
+## IMPORTANT: Running Python Code
+
+**ALWAYS use `uv run python` instead of `python3` or `python` directly.**
+
+This project uses uv to manage the virtual environment. Running Python commands directly with `python3` will NOT have access to the project dependencies installed in `.venv/`.
+
+Examples:
+- ✓ Correct: `uv run python script.py`
+- ✓ Correct: `uv run python -c "print('hello')"`
+- ✗ Wrong: `python3 script.py` (will fail with ModuleNotFoundError)
+- ✗ Wrong: `python script.py` (will fail with ModuleNotFoundError)
+
+This applies to all Python execution including testing, running scripts, and executing inline Python code.
