@@ -6,6 +6,54 @@ All notable changes to the Fantasy Basketball application will be documented in 
 
 ### Added - 2025-11-15
 
+#### Remaining Salary Column and Conditional Formatting
+
+- **New Feature**: Added "Remaining Salary" column to spreadsheet output
+  - Shows how much budget each team has left after roster spending
+  - Calculated as: Initial Budget - Total Salary
+  - Appears in both Summary sheet (team overview table) and individual team sheets
+  - Renamed from "FAAB Remaining" to "Remaining Salary" for clarity
+
+- **New Feature**: Conditional formatting for budget status visualization
+  - **GREEN** (RGB: 0.7, 0.9, 0.7): Applied when Remaining Salary > $0 (budget available)
+  - **RED** (RGB: 0.95, 0.7, 0.7): Applied when Remaining Salary ≤ $0 (at or over budget limit)
+  - Automatically highlights budget violations for quick identification
+  - Applied to Summary sheet Column E (Remaining Salary) and individual team sheet summary rows
+
+#### Code Changes
+
+**Sheet Generator** (`src/sheet_generator.py`):
+- Updated `create_summary_sheet()` method
+  - Added "Remaining Salary" column to team overview table (Column E)
+  - Added conditional format rules for Remaining Salary column (rows 21+)
+  - Green background for teams with budget remaining (> 0)
+  - Red background for teams at or over budget limit (≤ 0)
+
+- Updated `create_team_sheet()` method
+  - Renamed "FAAB REMAINING" row to "REMAINING SALARY"
+  - Added conditional format rules for the remaining salary value cell
+  - Same color coding logic as summary sheet (green > 0, red ≤ 0)
+
+- Added Google Sheets API conditional formatting using `addConditionalFormatRule` requests
+  - `NUMBER_GREATER` condition for green formatting (> 0)
+  - `NUMBER_LESS_THAN_EQ` condition for red formatting (≤ 0)
+
+#### Benefits
+
+- **Quick Visual Identification**: Instantly see which teams are over/at budget without reading numbers
+- **Budget Management**: Helps managers track their remaining salary cap at a glance
+- **League Monitoring**: Commissioners can quickly identify potential budget violations
+- **Professional Presentation**: Clean, color-coded data visualization improves report readability
+
+#### Testing
+
+- Test spreadsheet created with sample teams
+- Verified formatting with three scenarios:
+  - Team with budget remaining ($75) → GREEN ✓
+  - Team at limit ($0) → RED ✓
+  - Team over budget (-$15) → RED ✓
+- Confirmed conditional formatting appears correctly in both Summary and team sheets
+
 #### Roster Position Tracking and IL/IL+ Exclusion
 
 - **New Feature**: Added roster position column to output documents
