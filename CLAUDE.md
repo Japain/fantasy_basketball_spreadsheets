@@ -87,8 +87,6 @@ uv run python <script.py>
 fantasy_basketball/
 ├── config.py                      # Configuration management
 ├── main.py                        # Application entry point ✅
-├── test_full_integration.py       # Integration test script ✅
-├── test_league_extraction.py      # Yahoo data extraction test ✅
 ├── src/
 │   ├── auth/                      # OAuth authentication utilities
 │   │   ├── auth_with_code.py         # Yahoo auth for headless environments ✅
@@ -109,6 +107,10 @@ fantasy_basketball/
 │   ├── logger.py                  # Logging configuration ✅
 │   └── __init__.py                # Package init ✅
 ├── tests/                         # Test suite
+│   ├── test_league_extraction.py     # Yahoo data extraction test ✅
+│   ├── test_full_integration.py      # Full integration test (Yahoo + Google) ✅
+│   ├── test_il_exclusion.py          # IL/IL+ exclusion logic test ✅
+│   └── test_roster_position_output.py # Roster position output format test ✅
 ├── credentials/                   # API credentials (gitignored)
 │   ├── client_secret_*.json          # Google OAuth credentials
 │   └── google_token.pickle           # Saved Google token (auto-generated)

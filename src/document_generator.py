@@ -76,27 +76,28 @@ def generate_league_report(league: League, doc_title: Optional[str] = None) -> s
         for team_idx, team in enumerate(sorted_teams, 1):
             # Team header
             content_parts.append(f"{team_idx}. {team.team_name} ({team.manager_name})")
-            content_parts.append("-" * 60)
+            content_parts.append("-" * 70)
 
             # Sort roster by salary (descending)
             sorted_roster = sorted(team.roster, key=lambda p: p.salary, reverse=True)
 
             # Create roster table as formatted text
             # Header row
-            content_parts.append(f"{'Player Name':<30} {'Pos':<5} {'Salary':>8} {'Source':<15}")
-            content_parts.append("-" * 60)
+            content_parts.append(f"{'Player Name':<30} {'Pos':<5} {'Slot':<6} {'Salary':>8} {'Source':<15}")
+            content_parts.append("-" * 70)
 
             # Player rows
             for player in sorted_roster:
                 source_text = player.source.name.replace('_', ' ')
+                slot_text = player.roster_position or 'N/A'
                 content_parts.append(
-                    f"{player.name:<30} {player.position:<5} ${player.salary:>7} {source_text:<15}"
+                    f"{player.name:<30} {player.position:<5} {slot_text:<6} ${player.salary:>7} {source_text:<15}"
                 )
 
             # Summary rows
-            content_parts.append("-" * 60)
-            content_parts.append(f"{'TOTAL SALARY':<30} {'':<5} ${team.total_salary:>7}")
-            content_parts.append(f"{'FAAB REMAINING':<30} {'':<5} ${team.faab_remaining:>7}")
+            content_parts.append("-" * 70)
+            content_parts.append(f"{'TOTAL SALARY':<30} {'':<5} {'':<6} ${team.total_salary:>7}")
+            content_parts.append(f"{'FAAB REMAINING':<30} {'':<5} {'':<6} ${team.faab_remaining:>7}")
             content_parts.append("")
             content_parts.append("")
 
@@ -176,11 +177,11 @@ if __name__ == "__main__":
 
     # Create sample data
     players = [
-        Player("player1", "LeBron James", "SF", 63, SalarySource.KEEPER, "LAL"),
-        Player("player2", "Stephen Curry", "PG", 45, SalarySource.DRAFT, "GSW"),
-        Player("player3", "Giannis Antetokounmpo", "PF", 50, SalarySource.KEEPER, "MIL"),
-        Player("player4", "Luka Doncic", "PG", 40, SalarySource.FAAB_WAIVER, "DAL"),
-        Player("player5", "Nikola Jokic", "C", 55, SalarySource.KEEPER, "DEN"),
+        Player("player1", "LeBron James", "SF", 63, SalarySource.KEEPER, "LAL", "SF"),
+        Player("player2", "Stephen Curry", "PG", 45, SalarySource.DRAFT, "GSW", "PG"),
+        Player("player3", "Giannis Antetokounmpo", "PF", 50, SalarySource.KEEPER, "MIL", "PF"),
+        Player("player4", "Luka Doncic", "PG", 40, SalarySource.FAAB_WAIVER, "DAL", "BN"),
+        Player("player5", "Nikola Jokic", "C", 55, SalarySource.KEEPER, "DEN", "C"),
     ]
 
     # Create team properly

@@ -162,28 +162,29 @@ else:
 **Team**: Historically Juiced (Team ID: 1)
 **FAAB Remaining**: $184
 
-| Player Name                | Position | Salary | Source       |
-|---------------------------|----------|--------|--------------|
-| Shai Gilgeous-Alexander   | PG       | $33    | Keeper       |
-| Dylan Harper              | PG,SG    | $5     | Draft        |
-| Cam Thomas                | SG,SF    | $7     | Keeper       |
-| Derrick Jones Jr.         | SF,PF    | $3     | FAAB Waiver  |
-| Keldon Johnson            | SF,PF    | $21    | Keeper       |
-| Shaedon Sharpe            | SG,SF    | $12    | Keeper       |
-| Nic Claxton               | C        | $21    | Keeper       |
-| Deandre Ayton             | C        | $21    | Keeper       |
-| Isaiah Stewart            | PF,C     | $4     | FAAB Waiver  |
-| Ajay Mitchell             | PG,SG    | $3     | FAAB Waiver  |
-| Christian Braun           | SG,SF    | $4     | Draft        |
-| Jase Richardson           | SG       | $2     | Draft        |
-| Kelly Oubre Jr.           | SF,PF    | $1     | Draft        |
-| Jaren Jackson Jr.         | PF,C     | $27    | Keeper       |
-| De'Aaron Fox               | PG,SG    | $33    | Keeper       |
-| Luguentz Dort             | SG,SF    | $1     | Draft        |
-| Khris Middleton           | SF,PF    | $1     | Draft        |
+| Player Name                | Position | Slot | Salary | Source       |
+|---------------------------|----------|------|--------|--------------|
+| Shai Gilgeous-Alexander   | PG       | PG   | $33    | Keeper       |
+| Dylan Harper              | PG,SG    | SG   | $5     | Draft        |
+| Cam Thomas                | SG,SF    | G    | $7     | Keeper       |
+| Derrick Jones Jr.         | SF,PF    | SF   | $3     | FAAB Waiver  |
+| Keldon Johnson            | SF,PF    | PF   | $21    | Keeper       |
+| Shaedon Sharpe            | SG,SF    | F    | $12    | Keeper       |
+| Nic Claxton               | C        | C    | $21    | Keeper       |
+| Deandre Ayton             | C        | C    | $21    | Keeper       |
+| Isaiah Stewart            | PF,C     | Util | $4     | FAAB Waiver  |
+| Ajay Mitchell             | PG,SG    | BN   | $3     | FAAB Waiver  |
+| Christian Braun           | SG,SF    | BN   | $4     | Draft        |
+| Jase Richardson           | SG       | BN   | $2     | Draft        |
+| Kelly Oubre Jr.           | SF,PF    | BN   | $1     | Draft        |
+| Jaren Jackson Jr.         | PF,C     | IL   | $27    | Keeper       |
+| De'Aaron Fox               | PG,SG    | IL+  | $33    | Keeper       |
+| Luguentz Dort             | SG,SF    | BN   | $1     | Draft        |
+| Khris Middleton           | SF,PF    | BN   | $1     | Draft        |
 
-**Total Salary**: $199 ✅ **100% Coverage - All players have salary data!**
+**Total Salary**: $139* ✅ **100% Coverage - All players have salary data!**
 **FAAB Remaining**: $184
+*Total excludes players in IL/IL+ positions (Jaren Jackson Jr. $27 + De'Aaron Fox $33 = $60 excluded)
 
 ---
 
@@ -248,11 +249,11 @@ Player {
         'first': 'Shai',
         'last': 'Gilgeous-Alexander'
     },
-    'display_position': 'PG',                      # Current display position
+    'display_position': 'PG',                      # Current display position (eligibility)
     'eligible_positions': ['PG'],                   # Eligible positions
     'primary_position': 'PG',                      # Primary position
-    'selected_position': SelectedPosition {        # Current roster slot
-        'position': 'PG',
+    'selected_position': SelectedPosition {        # Current roster slot (IMPORTANT)
+        'position': 'PG',                          # Actual roster position (PG, BN, IL, IL+, etc.)
         'date': '2025-10-26',
         'coverage_type': 'date',
         'is_flex': 0
@@ -269,6 +270,11 @@ Player {
     # ... many other attributes
 }
 ```
+
+**Important Note on Positions**:
+- `display_position` / `eligible_positions`: What positions the player can play (e.g., "SF,PF")
+- `selected_position.position`: The actual roster slot they currently occupy (e.g., "SF", "BN", "IL", "IL+")
+- Players in "IL" or "IL+" slots should be excluded from total salary calculations
 
 ---
 
@@ -389,15 +395,22 @@ def extract_league_data():
         for player in roster.players:
             salary = get_player_salary(player, draft_cost_map, faab_cost_map)
 
+            # Get roster position from selected_position
+            roster_position = None
+            if hasattr(player, 'selected_position') and player.selected_position:
+                roster_position = player.selected_position.position
+
             players_data.append({
                 'name': player.name.full,
                 'position': player.display_position,
+                'roster_position': roster_position,  # Current roster slot
                 'salary': salary,
                 'player_key': player.player_key
             })
 
-            # Salary should always be a number now (0 for free agents)
-            total_salary += salary
+            # Only count salary if player is not in IL or IL+
+            if roster_position not in ('IL', 'IL+'):
+                total_salary += salary
 
         teams_data.append({
             'team_id': team.team_id,

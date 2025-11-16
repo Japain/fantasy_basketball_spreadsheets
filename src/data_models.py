@@ -29,6 +29,7 @@ class Player:
         salary: Player's current salary/cost
         source: How the player was acquired (determines salary source)
         nba_team: Player's NBA team abbreviation (e.g., 'OKC', 'LAL')
+        roster_position: Current roster slot (e.g., 'PG', 'BN', 'IL', 'IL+')
     """
     player_key: str
     name: str
@@ -36,11 +37,13 @@ class Player:
     salary: int
     source: SalarySource
     nba_team: Optional[str] = None
+    roster_position: Optional[str] = None
 
     def __str__(self) -> str:
         """String representation of player."""
         team_str = f" ({self.nba_team})" if self.nba_team else ""
-        return f"{self.name}{team_str} - {self.position} - ${self.salary} ({self.source.value})"
+        slot_str = f" [{self.roster_position}]" if self.roster_position else ""
+        return f"{self.name}{team_str}{slot_str} - {self.position} - ${self.salary} ({self.source.value})"
 
 
 @dataclass
@@ -65,15 +68,24 @@ class Team:
     roster: List[Player] = field(default_factory=list)
     total_salary: int = 0
     faab_remaining: int = 0
-    initial_budget: int = 200
+    initial_budget: int = 225
 
     def __str__(self) -> str:
         """String representation of team."""
         return f"{self.team_name} (Manager: {self.manager_name}) - {len(self.roster)} players, ${self.total_salary} spent, ${self.faab_remaining} FAAB remaining"
 
     def calculate_total_salary(self) -> int:
-        """Calculate and return total salary of all players on roster."""
-        return sum(player.salary for player in self.roster)
+        """
+        Calculate and return total salary of all players on roster.
+
+        Excludes players in IL (Injured List) or IL+ positions as they
+        don't count against the salary cap.
+        """
+        return sum(
+            player.salary
+            for player in self.roster
+            if player.roster_position not in ('IL', 'IL+')
+        )
 
     def add_player(self, player: Player) -> None:
         """
@@ -193,7 +205,8 @@ def create_player_from_yahoo_data(
     position: str,
     salary: int,
     source: SalarySource,
-    nba_team: Optional[str] = None
+    nba_team: Optional[str] = None,
+    roster_position: Optional[str] = None
 ) -> Player:
     """
     Factory function to create a Player from Yahoo API data.
@@ -205,6 +218,7 @@ def create_player_from_yahoo_data(
         salary: Player salary/cost
         source: How the player was acquired
         nba_team: NBA team abbreviation (optional)
+        roster_position: Current roster slot (e.g., 'PG', 'BN', 'IL', 'IL+') (optional)
 
     Returns:
         Player instance
@@ -215,7 +229,8 @@ def create_player_from_yahoo_data(
         position=position,
         salary=salary,
         source=source,
-        nba_team=nba_team
+        nba_team=nba_team,
+        roster_position=roster_position
     )
 
 

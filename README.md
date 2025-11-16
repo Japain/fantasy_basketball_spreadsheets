@@ -131,11 +131,12 @@ uv run python main.py --help
   - Team name and manager
   - Player roster table with columns:
     - Player Name
-    - Position
+    - Position (eligible positions)
+    - Slot (current roster position: PG, BN, IL, IL+, etc.)
     - NBA Team
     - Salary
     - Acquisition Source (Keeper/Draft/FAAB Waiver/Free Agent)
-  - Total salary for the team
+  - Total salary for the team (excludes players in IL/IL+ positions)
   - Remaining FAAB budget
 
 **Sample Statistics from Real League:**
@@ -181,6 +182,8 @@ This ensures accurate current salaries, even for players who were dropped and re
 
 - **Current Week Rosters** - Fetches rosters from the current week, not historical data
 - **100% Coverage** - Successfully retrieves salary data for all players
+- **Roster Position Tracking** - Shows each player's current roster slot (starting lineup, bench, IL, etc.)
+- **IL/IL+ Exclusion** - Players on injured list are excluded from total salary calculations
 - **Automatic Token Refresh** - OAuth tokens refresh automatically for both APIs
 - **Professional Formatting** - Frozen headers, currency formatting, color-coded sections
 - **Error Handling** - Comprehensive error messages and logging
@@ -191,10 +194,16 @@ This ensures accurate current salaries, even for players who were dropped and re
 
 ```bash
 # Test Yahoo data extraction
-uv run python test_league_extraction.py
+uv run python -m tests.test_league_extraction
 
 # Test full integration (Yahoo + Google Sheets)
-uv run python test_full_integration.py
+uv run python -m tests.test_full_integration
+
+# Test IL/IL+ exclusion logic
+uv run python -m tests.test_il_exclusion
+
+# Test roster position output format
+uv run python -m tests.test_roster_position_output
 ```
 
 ### Dependencies

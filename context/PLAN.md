@@ -101,13 +101,14 @@ league_data = {
             "roster": [
                 {
                     "player_name": str,
-                    "position": str,
+                    "position": str,  # Eligible positions (e.g., "PG", "SF,PF")
+                    "roster_position": str,  # Current roster slot (e.g., "PG", "BN", "IL", "IL+")
                     "salary": int,  # Player salary/cost
                     "source": str,  # "Keeper", "Draft", "FAAB Waiver", or "Free Agent"
                     "player_id": str
                 }
             ],
-            "total_salary": int,
+            "total_salary": int,  # Excludes players in IL/IL+ positions
             "faab_remaining": int  # Renamed from budget_remaining
         }
     ]
@@ -179,17 +180,19 @@ def get_google_docs_service():
 [Subtitle] Season Year
 
 [Team 1 Header] Team Name (Manager: Manager Name)
-┌─────────────────────┬──────────┬──────────┬───────────────┐
-│ Player Name         │ Position │ Salary   │ Source        │
-├─────────────────────┼──────────┼──────────┼───────────────┤
-│ LeBron James        │ SF       │ $45      │ Keeper        │
-│ Anthony Davis       │ C        │ $38      │ Draft         │
-│ Russell Westbrook   │ PG       │ $3       │ FAAB Waiver   │
-│ ...                 │ ...      │ ...      │ ...           │
-├─────────────────────┼──────────┼──────────┼───────────────┤
-│ Total Salary        │          │ $200     │               │
-│ FAAB Remaining      │          │ $184     │               │
-└─────────────────────┴──────────┴──────────┴───────────────┘
+┌─────────────────────┬──────────┬──────┬──────────┬───────────────┐
+│ Player Name         │ Position │ Slot │ Salary   │ Source        │
+├─────────────────────┼──────────┼──────┼──────────┼───────────────┤
+│ LeBron James        │ SF       │ SF   │ $45      │ Keeper        │
+│ Anthony Davis       │ C        │ C    │ $38      │ Draft         │
+│ Russell Westbrook   │ PG       │ BN   │ $3       │ FAAB Waiver   │
+│ Joel Embiid         │ C        │ IL   │ $25      │ Keeper        │
+│ ...                 │ ...      │ ...  │ ...      │ ...           │
+├─────────────────────┼──────────┼──────┼──────────┼───────────────┤
+│ Total Salary        │          │      │ $200*    │               │
+│ FAAB Remaining      │          │      │ $184     │               │
+└─────────────────────┴──────────┴──────┴──────────┴───────────────┘
+* Total excludes players in IL/IL+ positions
 
 [Team 2 Header] ...
 ```
@@ -197,14 +200,20 @@ def get_google_docs_service():
 **Formatting Considerations**:
 - Use Google Docs API batch update requests
 - Apply text styles (bold, font size) for headers
-- Create tables with proper borders (4 columns: Player, Position, Salary, Source)
+- Create tables with proper borders (5 columns: Player, Position, Slot, Salary, Source)
 - Add color highlighting for headers
 - Sort players by position or salary
+- Column descriptions:
+  - "Position" - Player's eligible positions (e.g., PG, SF,PF)
+  - "Slot" - Current roster slot (e.g., PG, BN, IL, IL+, Util)
+  - "Salary" - Player's acquisition cost
+  - "Source" - How the player was acquired
 - Source column provides transparency on salary origin:
   - "Keeper" - Retained from previous season
   - "Draft" - Acquired in auction draft
   - "FAAB Waiver" - Acquired via FAAB bid
   - "Free Agent" - Picked up at no cost
+- Total Salary calculation excludes players in IL or IL+ positions
 
 ### Phase 4: Application Entry Point
 

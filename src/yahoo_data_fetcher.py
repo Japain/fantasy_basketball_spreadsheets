@@ -476,6 +476,14 @@ class YahooDataFetcher:
         # Get position
         position = str(getattr(yahoo_player, 'display_position', 'N/A'))
 
+        # Get roster position (actual roster slot like PG, BN, IL, IL+)
+        roster_position = None
+        selected_pos_obj = getattr(yahoo_player, 'selected_position', None)
+        if selected_pos_obj:
+            position_value = getattr(selected_pos_obj, 'position', None)
+            if position_value:
+                roster_position = str(position_value)
+
         # Get NBA team
         nba_team = getattr(yahoo_player, 'editorial_team_abbr', None)
         if nba_team:
@@ -494,7 +502,8 @@ class YahooDataFetcher:
             position=position,
             salary=salary,
             source=source,
-            nba_team=nba_team
+            nba_team=nba_team,
+            roster_position=roster_position
         )
 
 
