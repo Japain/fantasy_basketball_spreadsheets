@@ -5,6 +5,7 @@ Handles authentication and data retrieval from Yahoo Fantasy Basketball API usin
 Implements the salary retrieval strategy: FAAB → Keeper → Draft → Free Agent.
 """
 
+import re
 from typing import Optional, Any, Dict, List, Tuple
 from pathlib import Path
 from yfpy.query import YahooFantasySportsQuery
@@ -19,6 +20,48 @@ from src.data_models import (
     create_team_from_yahoo_data,
     create_player_from_yahoo_data,
 )
+
+
+def _decode_and_clean_text(value: Any, strip_emojis: bool = False) -> str:
+    """
+    Decode bytes to string and optionally strip emojis.
+
+    Handles various text encoding scenarios from Yahoo API:
+    - Bytes objects (e.g., b'Team Name') are decoded to UTF-8
+    - Regular strings are passed through
+    - Emojis can be optionally removed for compatibility
+
+    Args:
+        value: Text value to decode/clean (can be bytes, str, or other)
+        strip_emojis: If True, removes emoji characters from the result
+
+    Returns:
+        Cleaned string value
+    """
+    # First, decode bytes to string if needed
+    if isinstance(value, bytes):
+        text = value.decode('utf-8', errors='replace')
+    else:
+        text = str(value)
+
+    # Strip emojis if requested
+    if strip_emojis:
+        # Remove emoji characters using regex
+        # This pattern matches most emoji ranges in Unicode
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            "\U00002702-\U000027B0"  # dingbats
+            "\U000024C2-\U0001F251"
+            "]+",
+            flags=re.UNICODE
+        )
+        text = emoji_pattern.sub('', text).strip()
+
+    return text
 
 
 class YahooDataFetcher:
@@ -214,7 +257,7 @@ class YahooDataFetcher:
         league = create_league_from_yahoo_data(
             league_id=str(league_info.league_id),
             league_key=str(league_info.league_key),
-            league_name=str(league_info.name),
+            league_name=_decode_and_clean_text(league_info.name),
             season=str(league_info.season),
             num_teams=int(league_info.num_teams)
         )
@@ -386,14 +429,14 @@ class YahooDataFetcher:
         # Get team basic info
         team_id = str(yahoo_team.team_id)
         team_key = str(yahoo_team.team_key)
-        team_name = str(yahoo_team.name) if hasattr(yahoo_team.name, 'decode') else str(yahoo_team.name)
+        team_name = _decode_and_clean_text(yahoo_team.name)
 
         # Get manager name
         manager_name = "Unknown"
         if hasattr(yahoo_team, 'managers') and yahoo_team.managers:
             first_manager = yahoo_team.managers[0]
             if hasattr(first_manager, 'nickname'):
-                manager_name = str(first_manager.nickname)
+                manager_name = _decode_and_clean_text(first_manager.nickname)
 
         # Get FAAB balance
         faab_remaining = getattr(yahoo_team, 'faab_balance', 0)
@@ -470,9 +513,9 @@ class YahooDataFetcher:
         if hasattr(yahoo_player, 'name'):
             name_obj = yahoo_player.name
             if hasattr(name_obj, 'full'):
-                name = str(name_obj.full)
+                name = _decode_and_clean_text(name_obj.full)
             elif hasattr(name_obj, 'ascii_full'):
-                name = str(name_obj.ascii_full)
+                name = _decode_and_clean_text(name_obj.ascii_full)
 
         # Get position
         position = str(getattr(yahoo_player, 'display_position', 'N/A'))
