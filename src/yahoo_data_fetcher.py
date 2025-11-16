@@ -273,6 +273,9 @@ class YahooDataFetcher:
         For players with multiple acquisitions, keeps only the MOST RECENT one
         (highest timestamp).
 
+        Note: Yahoo API returns faab_bid=None for $0 waiver claims. We treat
+        these as $0 FAAB acquisitions.
+
         Args:
             transactions: List of Transaction objects from league_info.transactions
 
@@ -282,12 +285,11 @@ class YahooDataFetcher:
         player_faab_map: Dict[str, Tuple[int, int]] = {}  # player_key -> (cost, timestamp)
 
         for transaction in transactions:
-            faab_bid = getattr(transaction, 'faab_bid', None)
             status = getattr(transaction, 'status', '')
             timestamp = getattr(transaction, 'timestamp', 0)
 
-            # Only count successful transactions with FAAB bids
-            if status != 'successful' or not faab_bid or faab_bid <= 0:
+            # Only process successful transactions
+            if status != 'successful':
                 continue
 
             # Find players being added
@@ -297,13 +299,22 @@ class YahooDataFetcher:
                     if not trans_data:
                         continue
 
-                    # Check if player is being added from waivers
+                    # Check if player is being added from waivers/free agents to a team
                     dest_type = getattr(trans_data, 'destination_type', '')
                     source_type = getattr(trans_data, 'source_type', '')
 
                     if dest_type == 'team' and source_type in ['waivers', 'freeagents']:
                         player_key = getattr(player, 'player_key', None)
                         if player_key:
+                            # Get FAAB bid (treat None as 0 for waiver acquisitions)
+                            faab_bid = getattr(transaction, 'faab_bid', None)
+                            if faab_bid is None:
+                                faab_bid = 0  # Yahoo returns None for $0 waiver claims
+
+                            # Skip invalid negative values
+                            if faab_bid < 0:
+                                continue
+
                             # Keep most recent FAAB bid (highest timestamp)
                             if player_key not in player_faab_map or timestamp > player_faab_map[player_key][1]:
                                 player_faab_map[player_key] = (faab_bid, timestamp)
@@ -400,8 +411,30 @@ class YahooDataFetcher:
         roster = self.get_team_roster(team_id, week=current_week)
 
         # Process each player
+        # Filter out players with no assigned roster position
+        # These are players in a transitional state and should not be counted
         if hasattr(roster, 'players') and roster.players:
             for yahoo_player in roster.players:
+                # Check if player has an assigned roster position
+                selected_pos_obj = getattr(yahoo_player, 'selected_position', None)
+
+                # Check if selected_position is None or if position attribute is None
+                if selected_pos_obj is None:
+                    player_name = "Unknown"
+                    if hasattr(yahoo_player, 'name') and hasattr(yahoo_player.name, 'full'):
+                        player_name = str(yahoo_player.name.full)
+                    logger.debug(f"Skipping player '{player_name}' - selected_position is None")
+                    continue
+
+                # Check if the position value within selected_position is None
+                position_value = getattr(selected_pos_obj, 'position', None)
+                if position_value is None or str(position_value).upper() == 'NONE':
+                    player_name = "Unknown"
+                    if hasattr(yahoo_player, 'name') and hasattr(yahoo_player.name, 'full'):
+                        player_name = str(yahoo_player.name.full)
+                    logger.debug(f"Skipping player '{player_name}' - no assigned roster slot (position is {position_value})")
+                    continue
+
                 player = self._extract_player_data(
                     yahoo_player,
                     draft_cost_map,
