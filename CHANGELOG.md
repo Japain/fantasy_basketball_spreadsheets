@@ -4,6 +4,37 @@ All notable changes to the Fantasy Basketball application will be documented in 
 
 ## [Unreleased]
 
+### Fixed - 2025-11-16
+
+#### Team Name Display Encoding
+
+- **Bug Fix**: Fixed team, league, manager, and player names displaying as byte strings
+  - Names were appearing as `b'Team Name'` instead of proper strings
+  - Added `_decode_and_clean_text()` helper function to properly handle Yahoo API text encoding
+  - Now correctly decodes bytes objects to UTF-8 strings
+  - Optional emoji stripping capability for compatibility (not currently enabled)
+
+**Files Modified**:
+- `src/yahoo_data_fetcher.py`
+  - Added `_decode_and_clean_text()` function with UTF-8 decoding and optional emoji removal
+  - Applied to league names in `extract_league_data()` (line 260)
+  - Applied to team names in `_extract_team_data()` (line 432)
+  - Applied to manager names in `_extract_team_data()` (line 438)
+  - Applied to player names in `_extract_player_data()` (lines 516, 518)
+
+**Technical Details**:
+- Handles both bytes and string inputs gracefully
+- Uses UTF-8 decoding with error replacement for invalid characters
+- Includes regex pattern for emoji removal (currently unused but available)
+- Emoji pattern covers: emoticons, symbols, pictographs, transport symbols, flags, dingbats
+
+**Impact**:
+- All spreadsheet names now display correctly without byte string prefixes
+- Improved readability in both Summary and individual team sheets
+- Better user experience when viewing generated reports
+
+**Commit**: 4598290 (2025-11-16)
+
 ### Added - 2025-11-15
 
 #### Remaining Salary Column and Conditional Formatting
