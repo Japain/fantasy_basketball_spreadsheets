@@ -109,6 +109,15 @@ class Team:
             breakdown[player.source] += player.salary
         return breakdown
 
+    def get_remaining_salary(self) -> int:
+        """
+        Calculate remaining salary budget.
+
+        Returns:
+            Remaining salary budget (initial_budget - total_salary)
+        """
+        return self.initial_budget - self.total_salary
+
 
 @dataclass
 class League:

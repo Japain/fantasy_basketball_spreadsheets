@@ -101,7 +101,7 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
             [],
             [],
             ["Team Summary"],
-            ["Team Name", "Manager", "Players", "Total Salary", "FAAB Remaining"],
+            ["Team Name", "Manager", "Players", "Total Salary", "Remaining Salary", "FAAB Remaining"],
         ]
 
         # Add team rows sorted by name
@@ -111,6 +111,7 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                 team.manager_name,
                 len(team.roster),
                 f"${team.total_salary}",
+                f"${team.get_remaining_salary()}",
                 f"${team.faab_remaining}"
             ])
 
@@ -219,8 +220,64 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                         'sheetId': 0,
                         'dimension': 'COLUMNS',
                         'startIndex': 0,
-                        'endIndex': 5
+                        'endIndex': 6
                     }
+                }
+            },
+            # Conditional formatting for Remaining Salary column (green if > 0)
+            {
+                'addConditionalFormatRule': {
+                    'rule': {
+                        'ranges': [{
+                            'sheetId': 0,
+                            'startRowIndex': 20,  # Team data starts at row 21 (index 20)
+                            'endRowIndex': 20 + league.num_teams,
+                            'startColumnIndex': 4,  # Column E (Remaining Salary)
+                            'endColumnIndex': 5
+                        }],
+                        'booleanRule': {
+                            'condition': {
+                                'type': 'NUMBER_GREATER',
+                                'values': [{'userEnteredValue': '0'}]
+                            },
+                            'format': {
+                                'backgroundColor': {
+                                    'red': 0.7,
+                                    'green': 0.9,
+                                    'blue': 0.7
+                                }
+                            }
+                        }
+                    },
+                    'index': 0
+                }
+            },
+            # Conditional formatting for Remaining Salary column (red if <= 0)
+            {
+                'addConditionalFormatRule': {
+                    'rule': {
+                        'ranges': [{
+                            'sheetId': 0,
+                            'startRowIndex': 20,  # Team data starts at row 21 (index 20)
+                            'endRowIndex': 20 + league.num_teams,
+                            'startColumnIndex': 4,  # Column E (Remaining Salary)
+                            'endColumnIndex': 5
+                        }],
+                        'booleanRule': {
+                            'condition': {
+                                'type': 'NUMBER_LESS_THAN_EQ',
+                                'values': [{'userEnteredValue': '0'}]
+                            },
+                            'format': {
+                                'backgroundColor': {
+                                    'red': 0.95,
+                                    'green': 0.7,
+                                    'blue': 0.7
+                                }
+                            }
+                        }
+                    },
+                    'index': 1
                 }
             }
         ]
@@ -273,7 +330,7 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
         values = [
             [f"{team.team_name} ({team.manager_name})"],
             [],
-            ["Player Name", "Position", "NBA Team", "Salary", "Source"],
+            ["Player Name", "Position", "Slot", "Salary", "Source"],
         ]
 
         # Sort roster by salary (descending)
@@ -285,7 +342,7 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
             values.append([
                 player.name,
                 player.position,
-                player.nba_team or "",
+                player.roster_position or "",
                 player.salary,
                 source_text
             ])
@@ -293,6 +350,7 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
         # Add summary rows
         values.append([])
         values.append(["TOTAL SALARY", "", "", team.total_salary, ""])
+        values.append(["REMAINING SALARY", "", "", team.get_remaining_salary(), ""])
         values.append(["FAAB REMAINING", "", "", team.faab_remaining, ""])
 
         # Write data to the sheet
@@ -389,7 +447,7 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
                     'range': {
                         'sheetId': sheet_id,
                         'startRowIndex': summary_row,
-                        'endRowIndex': summary_row + 2
+                        'endRowIndex': summary_row + 3
                     },
                     'cell': {
                         'userEnteredFormat': {
@@ -412,7 +470,7 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
                     'range': {
                         'sheetId': sheet_id,
                         'startRowIndex': summary_row,
-                        'endRowIndex': summary_row + 2,
+                        'endRowIndex': summary_row + 3,
                         'startColumnIndex': 3,
                         'endColumnIndex': 4
                     },
@@ -448,6 +506,62 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
                         }
                     },
                     'fields': 'gridProperties.frozenRowCount'
+                }
+            },
+            # Conditional formatting for REMAINING SALARY (green if > 0)
+            {
+                'addConditionalFormatRule': {
+                    'rule': {
+                        'ranges': [{
+                            'sheetId': sheet_id,
+                            'startRowIndex': summary_row + 1,  # REMAINING SALARY row
+                            'endRowIndex': summary_row + 2,
+                            'startColumnIndex': 3,  # Column D (value column)
+                            'endColumnIndex': 4
+                        }],
+                        'booleanRule': {
+                            'condition': {
+                                'type': 'NUMBER_GREATER',
+                                'values': [{'userEnteredValue': '0'}]
+                            },
+                            'format': {
+                                'backgroundColor': {
+                                    'red': 0.7,
+                                    'green': 0.9,
+                                    'blue': 0.7
+                                }
+                            }
+                        }
+                    },
+                    'index': 0
+                }
+            },
+            # Conditional formatting for REMAINING SALARY (red if <= 0)
+            {
+                'addConditionalFormatRule': {
+                    'rule': {
+                        'ranges': [{
+                            'sheetId': sheet_id,
+                            'startRowIndex': summary_row + 1,  # REMAINING SALARY row
+                            'endRowIndex': summary_row + 2,
+                            'startColumnIndex': 3,  # Column D (value column)
+                            'endColumnIndex': 4
+                        }],
+                        'booleanRule': {
+                            'condition': {
+                                'type': 'NUMBER_LESS_THAN_EQ',
+                                'values': [{'userEnteredValue': '0'}]
+                            },
+                            'format': {
+                                'backgroundColor': {
+                                    'red': 0.95,
+                                    'green': 0.7,
+                                    'blue': 0.7
+                                }
+                            }
+                        }
+                    },
+                    'index': 1
                 }
             }
         ]

@@ -31,6 +31,7 @@ class Config:
     NBA_LEAGUE_ID: Optional[str] = os.getenv("NBA_LEAGUE_ID")
     NBA_GAME_ID: str = os.getenv("NBA_GAME_ID", "449")  # Default to 2024-2025 season
     GAME_CODE: str = "nba"
+    INITIAL_AUCTION_BUDGET: int = int(os.getenv("INITIAL_AUCTION_BUDGET", "200"))
 
     # Google API Configuration
     GOOGLE_CREDENTIALS_PATH: str = os.getenv(

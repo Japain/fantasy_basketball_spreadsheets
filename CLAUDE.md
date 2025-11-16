@@ -21,6 +21,7 @@ Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library)
   - `YAHOO_CONSUMER_SECRET`: Yahoo API secret
   - `NBA_LEAGUE_ID`: Your fantasy league ID
   - `NBA_GAME_ID`: Yahoo game ID (466 for 2024-25 season)
+  - `INITIAL_AUCTION_BUDGET`: Initial auction budget for the league (e.g., 225)
   - `GOOGLE_CREDENTIALS_PATH`: Path to Google OAuth credentials JSON
 - `credentials/` directory contains:
   - Google OAuth credentials JSON file

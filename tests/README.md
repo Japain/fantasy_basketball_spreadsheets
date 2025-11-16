@@ -40,6 +40,18 @@ uv run python -m tests.test_roster_position_output
 ```
 Demonstrates and validates the roster output format including the new "Slot" column showing each player's current roster position.
 
+**test_remaining_salary.py** - Remaining Salary Calculation Test
+```bash
+uv run python tests/test_remaining_salary.py
+```
+Tests the remaining salary calculation feature (INITIAL_AUCTION_BUDGET - TOTAL_SALARY). Validates budget loading from config and accurate calculations with IL player exclusions.
+
+**test_conditional_formatting.py** - Conditional Formatting Test
+```bash
+uv run python tests/test_conditional_formatting.py
+```
+Tests conditional formatting for Remaining Salary in Google Sheets. Creates a test spreadsheet with teams having positive, zero, and negative remaining salaries to verify green/red color highlighting.
+
 ## Test Organization
 
 - **Integration Tests**: Test multiple components working together (Yahoo API, Google Sheets, data processing)

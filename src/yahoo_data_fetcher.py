@@ -404,7 +404,8 @@ class YahooDataFetcher:
             team_key=team_key,
             team_name=team_name,
             manager_name=manager_name,
-            faab_remaining=faab_remaining
+            faab_remaining=faab_remaining,
+            initial_budget=config.INITIAL_AUCTION_BUDGET
         )
 
         # Get roster (use current week if available)
