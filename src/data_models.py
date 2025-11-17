@@ -6,7 +6,7 @@ Defines the structure for Player, Team, and League data extracted from Yahoo Fan
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
 class SalarySource(Enum):
@@ -15,6 +15,14 @@ class SalarySource(Enum):
     DRAFT = "Draft"
     FAAB_WAIVER = "FAAB Waiver"
     FREE_AGENT = "Free Agent"
+
+
+class TransactionType(Enum):
+    """Enum representing types of transactions."""
+    ADD = "add"
+    DROP = "drop"
+    TRADE = "trade"
+    ADD_DROP = "add/drop"
 
 
 @dataclass
@@ -44,6 +52,37 @@ class Player:
         team_str = f" ({self.nba_team})" if self.nba_team else ""
         slot_str = f" [{self.roster_position}]" if self.roster_position else ""
         return f"{self.name}{team_str}{slot_str} - {self.position} - ${self.salary} ({self.source.value})"
+
+
+@dataclass
+class TransactionInfo:
+    """
+    Represents a transaction that affects a team's roster.
+
+    Used for tracking roster changes to determine which teams need updates
+    in incremental sheet update mode.
+
+    Attributes:
+        transaction_id: Yahoo's unique identifier for the transaction
+        timestamp: Unix timestamp of when the transaction occurred
+        team_id: Yahoo team ID involved in the transaction
+        team_name: Name of the team involved
+        transaction_type: Type of transaction (add, drop, trade, add/drop)
+        player_name: Name of the player involved
+        faab_bid: FAAB bid amount for waiver claims (None for free agents or trades)
+    """
+    transaction_id: str
+    timestamp: int
+    team_id: str
+    team_name: str
+    transaction_type: TransactionType
+    player_name: str
+    faab_bid: Optional[int] = None
+
+    def __str__(self) -> str:
+        """String representation of transaction."""
+        faab_str = f" (${self.faab_bid} FAAB)" if self.faab_bid is not None else ""
+        return f"{self.team_name}: {self.transaction_type.value} {self.player_name}{faab_str}"
 
 
 @dataclass
@@ -301,4 +340,39 @@ def create_league_from_yahoo_data(
         league_name=league_name,
         season=season,
         num_teams=num_teams
+    )
+
+
+def create_transaction_from_yahoo(
+    transaction_id: str,
+    timestamp: int,
+    team_id: str,
+    team_name: str,
+    transaction_type: TransactionType,
+    player_name: str,
+    faab_bid: Optional[int] = None
+) -> TransactionInfo:
+    """
+    Factory function to create a TransactionInfo from Yahoo API data.
+
+    Args:
+        transaction_id: Yahoo's transaction identifier
+        timestamp: Unix timestamp of transaction
+        team_id: Yahoo team ID
+        team_name: Team name
+        transaction_type: Type of transaction
+        player_name: Name of player involved
+        faab_bid: FAAB bid amount (optional)
+
+    Returns:
+        TransactionInfo instance
+    """
+    return TransactionInfo(
+        transaction_id=transaction_id,
+        timestamp=timestamp,
+        team_id=team_id,
+        team_name=team_name,
+        transaction_type=transaction_type,
+        player_name=player_name,
+        faab_bid=faab_bid
     )

@@ -217,6 +217,61 @@ class YahooDataFetcher:
             logger.error(f"Failed to retrieve league metadata: {e}")
             raise
 
+    def get_all_transactions(self) -> List[Any]:
+        """
+        Retrieve all transactions for the league.
+
+        Returns:
+            List of transaction objects from Yahoo API
+
+        Raises:
+            Exception: If transaction retrieval fails
+        """
+        logger.info("Fetching all league transactions...")
+        try:
+            transactions = self.yahoo_query.get_league_transactions()
+            transaction_count = len(transactions) if hasattr(transactions, '__len__') else 'unknown'
+            logger.info(f"Successfully retrieved {transaction_count} transactions")
+            logger.debug(f"Transaction types: {type(transactions)}")
+            return transactions
+        except Exception as e:
+            logger.error(f"Failed to retrieve league transactions: {e}")
+            raise
+
+    def get_transactions_since(self, since_timestamp: int) -> List[Any]:
+        """
+        Retrieve transactions that occurred after a specific timestamp.
+
+        Args:
+            since_timestamp: Unix timestamp to filter transactions (only return transactions after this time)
+
+        Returns:
+            List of transaction objects from Yahoo API that occurred after the timestamp
+
+        Raises:
+            Exception: If transaction retrieval fails
+        """
+        logger.info(f"Fetching transactions since timestamp {since_timestamp}...")
+        try:
+            # Get all transactions
+            all_transactions = self.get_all_transactions()
+
+            # Filter transactions by timestamp
+            filtered_transactions = []
+            for transaction in all_transactions:
+                trans_timestamp = getattr(transaction, 'timestamp', None)
+                if trans_timestamp is not None and trans_timestamp > since_timestamp:
+                    filtered_transactions.append(transaction)
+
+            logger.info(f"Found {len(filtered_transactions)} transactions since timestamp {since_timestamp}")
+            logger.debug(f"Total transactions: {len(all_transactions)}, Filtered: {len(filtered_transactions)}")
+
+            return filtered_transactions
+
+        except Exception as e:
+            logger.error(f"Failed to retrieve transactions since timestamp: {e}")
+            raise
+
 
     def extract_league_data(self) -> League:
         """
