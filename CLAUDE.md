@@ -30,6 +30,8 @@ Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library)
 ## Common Commands
 
 ### Running the Application
+
+#### Create New Spreadsheet (Default Mode)
 ```bash
 # Run with default settings from .env
 uv run python main.py
@@ -42,6 +44,24 @@ uv run python main.py --verbose
 
 # Run with custom document title
 uv run python main.py --title "My Custom Report Title"
+
+# Force create new spreadsheet even if updating
+uv run python main.py --create-new
+```
+
+#### Update Existing Spreadsheet (Incremental Update Mode)
+```bash
+# Update existing spreadsheet by URL
+uv run python main.py --spreadsheet-url "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit"
+
+# Update existing spreadsheet by ID
+uv run python main.py --spreadsheet-id "SPREADSHEET_ID"
+
+# Force update all teams (ignore transactions)
+uv run python main.py --spreadsheet-id "SPREADSHEET_ID" --force-full-update
+
+# Update with detailed transaction logging
+uv run python main.py --spreadsheet-id "SPREADSHEET_ID" --verbose
 
 # Show help
 uv run python main.py --help
@@ -104,14 +124,22 @@ fantasy_basketball/
 │   ├── yahoo_data_fetcher.py      # Yahoo API integration ✅
 │   ├── data_processor.py          # Data validation & processing ✅
 │   ├── google_auth.py             # Google API authentication ✅
-│   ├── document_generator.py      # Google Docs generation ✅
+│   ├── sheet_generator.py         # Google Sheets generation ✅
+│   ├── sheet_reader.py            # Read existing sheets (incremental updates) ✅
+│   ├── sheet_updater.py           # Update existing sheets (incremental updates) ✅
+│   ├── transaction_tracker.py     # Track transactions (incremental updates) ✅
 │   ├── logger.py                  # Logging configuration ✅
 │   └── __init__.py                # Package init ✅
 ├── tests/                         # Test suite
 │   ├── test_league_extraction.py     # Yahoo data extraction test ✅
 │   ├── test_full_integration.py      # Full integration test (Yahoo + Google) ✅
 │   ├── test_il_exclusion.py          # IL/IL+ exclusion logic test ✅
-│   └── test_roster_position_output.py # Roster position output format test ✅
+│   ├── test_roster_position_output.py # Roster position output format test ✅
+│   ├── test_transaction_tracker.py   # Transaction tracking test ✅
+│   ├── test_sheet_reader.py          # Sheet reading test ✅
+│   ├── test_sheet_updater.py         # Sheet updating test ✅
+│   ├── test_incremental_update.py    # Incremental update integration test ✅
+│   └── test_edge_cases.py            # Edge case and error handling test ✅
 ├── credentials/                   # API credentials (gitignored)
 │   ├── client_secret_*.json          # Google OAuth credentials
 │   └── google_token.pickle           # Saved Google token (auto-generated)
@@ -139,7 +167,51 @@ fantasy_basketball/
 - This project uses `uv` instead of pip/poetry for faster dependency management
 - The `.python-version` file pins Python to 3.12
 - API credentials are stored in `.env` and loaded via python-dotenv (included with yfpy)
-- The project is in early stages with minimal implementation
+
+## Features
+
+### Incremental Sheet Updates (v2.0)
+
+The application supports two modes: **Create** (default) and **Update** (incremental).
+
+**How It Works:**
+1. **Create Mode**: Generates a new Google Sheet with current league data
+   - Stores a timestamp in the Summary sheet (cell G1) for future updates
+   - Use this for first-time setup or when you want a fresh snapshot
+
+2. **Update Mode**: Updates existing sheet with only changed data
+   - Reads last update timestamp from Summary sheet
+   - Fetches Yahoo transactions since last update
+   - Identifies which teams had roster changes
+   - Updates ONLY affected team sheets (efficiency: 75-100%)
+   - Always updates Summary sheet with new statistics and timestamp
+   - Preserves all formatting and structure
+
+**Update Efficiency:**
+- If 4 teams had transactions, updates only those 4 sheets (skip 12 teams)
+- If no transactions occurred, updates only Summary sheet (skip all teams)
+- Force full update available via `--force-full-update` flag
+
+**Timestamp Management:**
+- Machine-readable: ISO 8601 timestamp stored in cell G1 (e.g., "2025-11-18T10:30:00Z")
+- Human-readable: Displayed in Summary sheet (e.g., "November 18, 2025 at 10:30 AM UTC")
+- Both updated with each run to track last update time
+
+**Verbose Logging:**
+When using `--verbose`, shows detailed transaction information:
+```
+  • Team Name (2 transaction(s))
+      - [11/18 10:30] ADD: Player Name ($5)
+      - [11/18 09:15] DROP: Player Name
+```
+
+**Edge Cases Handled:**
+- Invalid spreadsheet IDs: Returns None, treated as first run
+- No transactions: Updates only summary sheet
+- Team name changes: Creates new sheet, old sheet remains
+- New teams: Automatically creates sheet for new team
+- Removed teams: Old sheets remain (no deletion)
+- Backwards compatibility: Works with old spreadsheets without timestamps
 
 ## IMPORTANT: Running Python Code
 

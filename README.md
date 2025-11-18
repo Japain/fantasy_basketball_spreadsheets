@@ -11,6 +11,11 @@ A Python application that extracts fantasy basketball league data from Yahoo Fan
   - Individual team sheets with complete rosters
   - Currency formatting, frozen headers, and color-coded sections
   - Players sorted by salary (highest to lowest)
+- ⚡ **Incremental Updates** - Efficiently update existing spreadsheets
+  - Only updates teams with roster changes (75-100% efficiency)
+  - Tracks transactions since last update
+  - Preserves all formatting and structure
+  - Force full update option available
 - 🔐 **OAuth 2.0 Authentication** - Secure authentication with both Yahoo and Google APIs
 - 🔄 **Automatic Token Refresh** - Tokens refresh automatically, no repeated authentication needed
 - 💻 **Command-Line Interface** - Easy-to-use CLI with customizable options
@@ -87,30 +92,61 @@ Follow the prompts to complete OAuth authentication for each service.
 
 ## Usage
 
-### Generate a Report
+### Generate a New Report (Create Mode)
 
 ```bash
-# Generate report for your league
+# Generate new report for your league
 uv run python main.py
-```
 
-The application will:
-1.  Validate configuration
-2.  Extract league data from Yahoo Fantasy API
-3.  Generate a Google Sheets report
-4.  Print the spreadsheet URL
-
-### Command-Line Options
-
-```bash
 # Custom spreadsheet title
 uv run python main.py --title "Week 4 Salary Report"
 
 # Different league
 uv run python main.py --league-id 12345
+```
 
+The application will:
+1. Validate configuration
+2. Extract league data from Yahoo Fantasy API
+3. Generate a new Google Sheets report
+4. Print the spreadsheet URL
+
+### Update an Existing Report (Incremental Update Mode)
+
+```bash
+# Update existing spreadsheet (by URL)
+uv run python main.py --spreadsheet-url "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit"
+
+# Update existing spreadsheet (by ID)
+uv run python main.py --spreadsheet-id "SPREADSHEET_ID"
+
+# Force update all teams (ignore transactions)
+uv run python main.py --spreadsheet-id "SPREADSHEET_ID" --force-full-update
+
+# Update with detailed transaction logging
+uv run python main.py --spreadsheet-id "SPREADSHEET_ID" --verbose
+```
+
+The application will:
+1. Read the last update timestamp from the existing spreadsheet
+2. Fetch transactions since last update
+3. Update **only teams with roster changes** (or all teams with `--force-full-update`)
+4. Update Summary sheet with current statistics
+5. Print efficiency metrics
+
+**Update Efficiency Examples:**
+- 4 teams had transactions → Updates 4/16 teams (75% efficiency)
+- No transactions → Updates 0/16 teams, summary only (100% efficiency)
+- Force full update → Updates all 16 teams
+
+### Command-Line Options
+
+```bash
 # Verbose logging for debugging
 uv run python main.py --verbose
+
+# Force create new spreadsheet
+uv run python main.py --create-new
 
 # Show help
 uv run python main.py --help
@@ -159,6 +195,9 @@ fantasy_basketball/
       data_processor.py      # Data validation and processing
       google_auth.py         # Google Sheets authentication
       sheet_generator.py     # Google Sheets generation
+      sheet_reader.py        # Read existing sheets (incremental updates)
+      sheet_updater.py       # Update existing sheets (incremental updates)
+      transaction_tracker.py # Track transactions (incremental updates)
       logger.py              # Logging configuration
    credentials/               # API credentials (gitignored)
    tests/                     # Test suite
@@ -193,18 +232,21 @@ This ensures accurate current salaries, even for players who were dropped and re
 ### Running Tests
 
 ```bash
-# Test Yahoo data extraction
-uv run python -m tests.test_league_extraction
+# Core functionality tests
+uv run python -m tests.test_league_extraction        # Yahoo data extraction
+uv run python -m tests.test_full_integration         # Full integration (Yahoo + Google)
+uv run python -m tests.test_il_exclusion             # IL/IL+ exclusion logic
+uv run python -m tests.test_roster_position_output   # Roster position output
 
-# Test full integration (Yahoo + Google Sheets)
-uv run python -m tests.test_full_integration
-
-# Test IL/IL+ exclusion logic
-uv run python -m tests.test_il_exclusion
-
-# Test roster position output format
-uv run python -m tests.test_roster_position_output
+# Incremental update tests
+uv run python -m tests.test_transaction_tracker      # Transaction tracking (5 tests)
+uv run python -m tests.test_sheet_reader             # Sheet reading (6 tests)
+uv run python -m tests.test_sheet_updater            # Sheet updating (5 tests)
+uv run python -m tests.test_incremental_update       # Integration (5 tests)
+uv run python -m tests.test_edge_cases               # Edge cases (6 tests)
 ```
+
+**Test Coverage:** 25+ automated tests covering all incremental update functionality
 
 ### Dependencies
 
@@ -236,11 +278,21 @@ uv run python -m src.auth.google_auth_manual
 
 ## Documentation
 
+### Current Documentation
+- **CHANGELOG.md** - Complete version history and release notes
+- **INCREMENTAL_UPDATE_CHANGELOG.md** - Detailed technical reference for v2.0 incremental updates
 - **CLAUDE.md** - Developer documentation and project overview
-- **context/TODO.md** - Complete task list and project status
-- **context/SESSION_NOTES.md** - Detailed session history and implementation notes
-- **context/SALARY_DATA_FINDINGS.md** - Salary data investigation results
-- **context/FAAB_INVESTIGATION_SUMMARY.md** - FAAB transaction analysis
+- **README.md** - This file - User guide and quick start
+- **TODO.md** - Complete task list and project status
+- **tests/README.md** - Test suite documentation
+
+### Planning Documents
+- **context/INCREMENTAL_UPDATE_PLAN.md** - Incremental update feature implementation plan (v2.0)
+- **context/PLAN.md** - Original implementation plan (v1.0)
+
+### Historical Documentation (Archived)
+- **context/archive/** - Historical documentation from earlier development phases
+  - See [context/archive/README.md](context/archive/README.md) for details
 
 ## License
 
@@ -254,6 +306,12 @@ uv run python -m src.auth.google_auth_manual
 
 ---
 
-**Status**:  Production-ready and fully functional
+**Status**: ✅ Production-ready with incremental update feature (v2.0)
+
+**Recent Updates:**
+- Added incremental update mode for efficient spreadsheet updates
+- 25+ automated tests covering all functionality
+- Enhanced logging with detailed transaction information
+- Backwards compatible with existing spreadsheets
 
 For detailed technical documentation, see [CLAUDE.md](CLAUDE.md).
