@@ -5,6 +5,7 @@ including team rosters, player information, and salary details.
 """
 
 from typing import List, Optional, Any
+from datetime import datetime, timezone
 from googleapiclient.errors import HttpError
 
 from src.logger import get_logger
@@ -17,6 +18,37 @@ logger = get_logger(__name__)
 class SheetGenerationError(Exception):
     """Exception raised for sheet generation errors."""
     pass
+
+
+def _get_current_timestamp() -> str:
+    """
+    Get current UTC timestamp in ISO 8601 format.
+
+    Returns:
+        str: Current timestamp in ISO 8601 format (e.g., "2025-11-15T10:30:00Z")
+    """
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _format_timestamp_for_display(timestamp: str) -> str:
+    """
+    Format ISO 8601 timestamp for human-readable display.
+
+    Args:
+        timestamp: ISO 8601 timestamp string (e.g., "2025-11-15T10:30:00Z")
+
+    Returns:
+        str: Human-readable timestamp (e.g., "November 15, 2025 at 10:30 AM UTC")
+             Returns original string if parsing fails.
+    """
+    try:
+        # Parse ISO 8601 timestamp
+        dt = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
+        # Format as human-readable string
+        return dt.strftime("%B %d, %Y at %I:%M %p UTC")
+    except ValueError as e:
+        logger.warning(f"Failed to parse timestamp '{timestamp}': {e}")
+        return timestamp
 
 
 def create_spreadsheet(title: str) -> tuple[Any, str]:
@@ -80,15 +112,20 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
         stats = league.get_league_stats()
         avg_player_salary = stats['total_salary_spent'] / stats['total_players'] if stats['total_players'] > 0 else 0
 
+        # Get current timestamp
+        current_timestamp = _get_current_timestamp()
+        human_readable_timestamp = _format_timestamp_for_display(current_timestamp)
+
         # Prepare data for the summary sheet
         values = [
-            [f"{league.league_name} - League Summary"],
+            [f"{league.league_name} - League Summary", "", "", "", "", "Last Updated (Timestamp)", current_timestamp],
             [],
             ["League Information"],
             ["Season", league.season],
             ["Number of Teams", league.num_teams],
             ["Total Players", stats['total_players']],
             ["Average Roster Size", f"{stats['avg_roster_size']:.1f}"],
+            ["Last Updated", human_readable_timestamp],
             [],
             ["Salary Information"],
             ["Total Salary Spent", f"${stats['total_salary_spent']}"],
@@ -139,13 +176,15 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                     'fields': 'title'
                 }
             },
-            # Format title (row 1)
+            # Format title (row 1, columns A-E)
             {
                 'repeatCell': {
                     'range': {
                         'sheetId': 0,
                         'startRowIndex': 0,
-                        'endRowIndex': 1
+                        'endRowIndex': 1,
+                        'startColumnIndex': 0,
+                        'endColumnIndex': 5
                     },
                     'cell': {
                         'userEnteredFormat': {
@@ -159,7 +198,62 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                     'fields': 'userEnteredFormat(textFormat,horizontalAlignment)'
                 }
             },
-            # Format section headers (rows 3, 9, 14, 19)
+            # Format timestamp label (F1)
+            {
+                'repeatCell': {
+                    'range': {
+                        'sheetId': 0,
+                        'startRowIndex': 0,
+                        'endRowIndex': 1,
+                        'startColumnIndex': 5,
+                        'endColumnIndex': 6
+                    },
+                    'cell': {
+                        'userEnteredFormat': {
+                            'textFormat': {
+                                'bold': True,
+                                'fontSize': 9,
+                                'italic': True
+                            },
+                            'horizontalAlignment': 'RIGHT',
+                            'backgroundColor': {
+                                'red': 0.95,
+                                'green': 0.95,
+                                'blue': 0.95
+                            }
+                        }
+                    },
+                    'fields': 'userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)'
+                }
+            },
+            # Format timestamp value (G1)
+            {
+                'repeatCell': {
+                    'range': {
+                        'sheetId': 0,
+                        'startRowIndex': 0,
+                        'endRowIndex': 1,
+                        'startColumnIndex': 6,
+                        'endColumnIndex': 7
+                    },
+                    'cell': {
+                        'userEnteredFormat': {
+                            'textFormat': {
+                                'fontSize': 9,
+                                'italic': True
+                            },
+                            'horizontalAlignment': 'LEFT',
+                            'backgroundColor': {
+                                'red': 0.95,
+                                'green': 0.95,
+                                'blue': 0.95
+                            }
+                        }
+                    },
+                    'fields': 'userEnteredFormat(textFormat,horizontalAlignment,backgroundColor)'
+                }
+            },
+            # Format "League Information" header (row 3, index 2)
             {
                 'repeatCell': {
                     'range': {
@@ -182,13 +276,82 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                     'fields': 'userEnteredFormat(textFormat,backgroundColor)'
                 }
             },
-            # Format team table header (row 20)
+            # Format "Salary Information" header (row 10, index 9)
+            {
+                'repeatCell': {
+                    'range': {
+                        'sheetId': 0,
+                        'startRowIndex': 9,
+                        'endRowIndex': 10
+                    },
+                    'cell': {
+                        'userEnteredFormat': {
+                            'textFormat': {
+                                'bold': True
+                            },
+                            'backgroundColor': {
+                                'red': 0.9,
+                                'green': 0.9,
+                                'blue': 0.9
+                            }
+                        }
+                    },
+                    'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+                }
+            },
+            # Format "FAAB Information" header (row 15, index 14)
+            {
+                'repeatCell': {
+                    'range': {
+                        'sheetId': 0,
+                        'startRowIndex': 14,
+                        'endRowIndex': 15
+                    },
+                    'cell': {
+                        'userEnteredFormat': {
+                            'textFormat': {
+                                'bold': True
+                            },
+                            'backgroundColor': {
+                                'red': 0.9,
+                                'green': 0.9,
+                                'blue': 0.9
+                            }
+                        }
+                    },
+                    'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+                }
+            },
+            # Format "Team Summary" header (row 20, index 19)
             {
                 'repeatCell': {
                     'range': {
                         'sheetId': 0,
                         'startRowIndex': 19,
                         'endRowIndex': 20
+                    },
+                    'cell': {
+                        'userEnteredFormat': {
+                            'textFormat': {
+                                'bold': True
+                            },
+                            'backgroundColor': {
+                                'red': 0.9,
+                                'green': 0.9,
+                                'blue': 0.9
+                            }
+                        }
+                    },
+                    'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+                }
+            },
+            # Format team table header with column names (row 21, index 20)
+            {
+                'repeatCell': {
+                    'range': {
+                        'sheetId': 0,
+                        'startRowIndex': 20,
+                        'endRowIndex': 21
                     },
                     'cell': {
                         'userEnteredFormat': {
@@ -230,8 +393,8 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                     'rule': {
                         'ranges': [{
                             'sheetId': 0,
-                            'startRowIndex': 20,  # Team data starts at row 21 (index 20)
-                            'endRowIndex': 20 + league.num_teams,
+                            'startRowIndex': 21,  # Team data starts at row 22 (index 21)
+                            'endRowIndex': 21 + league.num_teams,
                             'startColumnIndex': 4,  # Column E (Remaining Salary)
                             'endColumnIndex': 5
                         }],
@@ -258,8 +421,8 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
                     'rule': {
                         'ranges': [{
                             'sheetId': 0,
-                            'startRowIndex': 20,  # Team data starts at row 21 (index 20)
-                            'endRowIndex': 20 + league.num_teams,
+                            'startRowIndex': 21,  # Team data starts at row 22 (index 21)
+                            'endRowIndex': 21 + league.num_teams,
                             'startColumnIndex': 4,  # Column E (Remaining Salary)
                             'endColumnIndex': 5
                         }],
@@ -295,6 +458,273 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
         raise SheetGenerationError(error_msg) from e
 
 
+def _create_team_sheet_data(team: Team) -> List[List[Any]]:
+    """
+    Create the data array for a team sheet.
+
+    Args:
+        team: Team object with roster data.
+
+    Returns:
+        List[List[Any]]: 2D array of values for the team sheet, including:
+            - Title row with team name and manager
+            - Blank row
+            - Header row with column names
+            - Player rows (sorted by salary, descending)
+            - Blank row
+            - Summary rows (total salary, remaining salary, FAAB)
+    """
+    # Prepare roster data
+    values = [
+        [f"{team.team_name} ({team.manager_name})"],
+        [],
+        ["Player Name", "Position", "Slot", "Salary", "Source"],
+    ]
+
+    # Sort roster by salary (descending)
+    sorted_roster = sorted(team.roster, key=lambda p: p.salary, reverse=True)
+
+    # Add player rows
+    for player in sorted_roster:
+        source_text = player.source.name.replace('_', ' ')
+        values.append([
+            player.name,
+            player.position,
+            player.roster_position or "",
+            player.salary,
+            source_text
+        ])
+
+    # Add summary rows
+    values.append([])
+    values.append(["TOTAL SALARY", "", "", team.total_salary, ""])
+    values.append(["REMAINING SALARY", "", "", team.get_remaining_salary(), ""])
+    values.append(["FAAB REMAINING", "", "", team.faab_remaining, ""])
+
+    return values
+
+
+def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]:
+    """
+    Create formatting requests for a team sheet.
+
+    Args:
+        sheet_id: The Google Sheets sheet ID for this team sheet.
+        num_players: The number of players on the team roster.
+
+    Returns:
+        List[dict]: List of formatting requests for batchUpdate, including:
+            - Title formatting (row 1)
+            - Header row formatting (row 3)
+            - Salary column currency formatting
+            - Summary rows formatting
+            - Column auto-resize
+            - Frozen header rows
+            - Conditional formatting for remaining salary
+    """
+    summary_row = num_players + 4  # Header + blank + table header + players + blank
+
+    format_requests = [
+        # Format title (row 1)
+        {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': 0,
+                    'endRowIndex': 1
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'textFormat': {
+                            'bold': True,
+                            'fontSize': 12
+                        },
+                        'horizontalAlignment': 'CENTER'
+                    }
+                },
+                'fields': 'userEnteredFormat(textFormat,horizontalAlignment)'
+            }
+        },
+        # Format table header (row 3)
+        {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': 2,
+                    'endRowIndex': 3
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'textFormat': {
+                            'bold': True
+                        },
+                        'backgroundColor': {
+                            'red': 0.2,
+                            'green': 0.4,
+                            'blue': 0.7
+                        },
+                        'textFormat': {
+                            'foregroundColor': {
+                                'red': 1.0,
+                                'green': 1.0,
+                                'blue': 1.0
+                            },
+                            'bold': True
+                        }
+                    }
+                },
+                'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+            }
+        },
+        # Format salary column as currency
+        {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': 3,
+                    'endRowIndex': 3 + num_players,
+                    'startColumnIndex': 3,
+                    'endColumnIndex': 4
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'numberFormat': {
+                            'type': 'CURRENCY',
+                            'pattern': '$#,##0'
+                        }
+                    }
+                },
+                'fields': 'userEnteredFormat(numberFormat)'
+            }
+        },
+        # Format summary rows (bold)
+        {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': summary_row,
+                    'endRowIndex': summary_row + 3
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'textFormat': {
+                            'bold': True
+                        },
+                        'backgroundColor': {
+                            'red': 0.95,
+                            'green': 0.95,
+                            'blue': 0.95
+                        }
+                    }
+                },
+                'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+            }
+        },
+        # Format summary salary values as currency
+        {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': summary_row,
+                    'endRowIndex': summary_row + 3,
+                    'startColumnIndex': 3,
+                    'endColumnIndex': 4
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'numberFormat': {
+                            'type': 'CURRENCY',
+                            'pattern': '$#,##0'
+                        }
+                    }
+                },
+                'fields': 'userEnteredFormat(numberFormat)'
+            }
+        },
+        # Auto-resize columns
+        {
+            'autoResizeDimensions': {
+                'dimensions': {
+                    'sheetId': sheet_id,
+                    'dimension': 'COLUMNS',
+                    'startIndex': 0,
+                    'endIndex': 5
+                }
+            }
+        },
+        # Freeze header row
+        {
+            'updateSheetProperties': {
+                'properties': {
+                    'sheetId': sheet_id,
+                    'gridProperties': {
+                        'frozenRowCount': 3
+                    }
+                },
+                'fields': 'gridProperties.frozenRowCount'
+            }
+        },
+        # Conditional formatting for REMAINING SALARY (green if > 0)
+        {
+            'addConditionalFormatRule': {
+                'rule': {
+                    'ranges': [{
+                        'sheetId': sheet_id,
+                        'startRowIndex': summary_row + 1,  # REMAINING SALARY row
+                        'endRowIndex': summary_row + 2,
+                        'startColumnIndex': 3,  # Column D (value column)
+                        'endColumnIndex': 4
+                    }],
+                    'booleanRule': {
+                        'condition': {
+                            'type': 'NUMBER_GREATER',
+                            'values': [{'userEnteredValue': '0'}]
+                        },
+                        'format': {
+                            'backgroundColor': {
+                                'red': 0.7,
+                                'green': 0.9,
+                                'blue': 0.7
+                            }
+                        }
+                    }
+                },
+                'index': 0
+            }
+        },
+        # Conditional formatting for REMAINING SALARY (red if <= 0)
+        {
+            'addConditionalFormatRule': {
+                'rule': {
+                    'ranges': [{
+                        'sheetId': sheet_id,
+                        'startRowIndex': summary_row + 1,  # REMAINING SALARY row
+                        'endRowIndex': summary_row + 2,
+                        'startColumnIndex': 3,  # Column D (value column)
+                        'endColumnIndex': 4
+                    }],
+                    'booleanRule': {
+                        'condition': {
+                            'type': 'NUMBER_LESS_THAN_EQ',
+                            'values': [{'userEnteredValue': '0'}]
+                        },
+                        'format': {
+                            'backgroundColor': {
+                                'red': 0.95,
+                                'green': 0.7,
+                                'blue': 0.7
+                            }
+                        }
+                    }
+                },
+                'index': 1
+            }
+        }
+    ]
+
+    return format_requests
+
+
 def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
     """
     Create a sheet for a team's roster.
@@ -326,32 +756,11 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
 
         sheet_id = response['replies'][0]['addSheet']['properties']['sheetId']
 
-        # Prepare roster data
-        values = [
-            [f"{team.team_name} ({team.manager_name})"],
-            [],
-            ["Player Name", "Position", "Slot", "Salary", "Source"],
-        ]
+        # Generate team sheet data
+        values = _create_team_sheet_data(team)
 
-        # Sort roster by salary (descending)
+        # Calculate number of players for formatting
         sorted_roster = sorted(team.roster, key=lambda p: p.salary, reverse=True)
-
-        # Add player rows
-        for player in sorted_roster:
-            source_text = player.source.name.replace('_', ' ')
-            values.append([
-                player.name,
-                player.position,
-                player.roster_position or "",
-                player.salary,
-                source_text
-            ])
-
-        # Add summary rows
-        values.append([])
-        values.append(["TOTAL SALARY", "", "", team.total_salary, ""])
-        values.append(["REMAINING SALARY", "", "", team.get_remaining_salary(), ""])
-        values.append(["FAAB REMAINING", "", "", team.faab_remaining, ""])
 
         # Write data to the sheet
         range_name = f"'{team.team_name[:100]}'!A1"
@@ -366,205 +775,7 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
 
         # Format the team sheet
         num_players = len(sorted_roster)
-        summary_row = num_players + 4  # Header + blank + table header + players + blank
-
-        format_requests = [
-            # Format title (row 1)
-            {
-                'repeatCell': {
-                    'range': {
-                        'sheetId': sheet_id,
-                        'startRowIndex': 0,
-                        'endRowIndex': 1
-                    },
-                    'cell': {
-                        'userEnteredFormat': {
-                            'textFormat': {
-                                'bold': True,
-                                'fontSize': 12
-                            },
-                            'horizontalAlignment': 'CENTER'
-                        }
-                    },
-                    'fields': 'userEnteredFormat(textFormat,horizontalAlignment)'
-                }
-            },
-            # Format table header (row 3)
-            {
-                'repeatCell': {
-                    'range': {
-                        'sheetId': sheet_id,
-                        'startRowIndex': 2,
-                        'endRowIndex': 3
-                    },
-                    'cell': {
-                        'userEnteredFormat': {
-                            'textFormat': {
-                                'bold': True
-                            },
-                            'backgroundColor': {
-                                'red': 0.2,
-                                'green': 0.4,
-                                'blue': 0.7
-                            },
-                            'textFormat': {
-                                'foregroundColor': {
-                                    'red': 1.0,
-                                    'green': 1.0,
-                                    'blue': 1.0
-                                },
-                                'bold': True
-                            }
-                        }
-                    },
-                    'fields': 'userEnteredFormat(textFormat,backgroundColor)'
-                }
-            },
-            # Format salary column as currency
-            {
-                'repeatCell': {
-                    'range': {
-                        'sheetId': sheet_id,
-                        'startRowIndex': 3,
-                        'endRowIndex': 3 + num_players,
-                        'startColumnIndex': 3,
-                        'endColumnIndex': 4
-                    },
-                    'cell': {
-                        'userEnteredFormat': {
-                            'numberFormat': {
-                                'type': 'CURRENCY',
-                                'pattern': '$#,##0'
-                            }
-                        }
-                    },
-                    'fields': 'userEnteredFormat(numberFormat)'
-                }
-            },
-            # Format summary rows (bold)
-            {
-                'repeatCell': {
-                    'range': {
-                        'sheetId': sheet_id,
-                        'startRowIndex': summary_row,
-                        'endRowIndex': summary_row + 3
-                    },
-                    'cell': {
-                        'userEnteredFormat': {
-                            'textFormat': {
-                                'bold': True
-                            },
-                            'backgroundColor': {
-                                'red': 0.95,
-                                'green': 0.95,
-                                'blue': 0.95
-                            }
-                        }
-                    },
-                    'fields': 'userEnteredFormat(textFormat,backgroundColor)'
-                }
-            },
-            # Format summary salary values as currency
-            {
-                'repeatCell': {
-                    'range': {
-                        'sheetId': sheet_id,
-                        'startRowIndex': summary_row,
-                        'endRowIndex': summary_row + 3,
-                        'startColumnIndex': 3,
-                        'endColumnIndex': 4
-                    },
-                    'cell': {
-                        'userEnteredFormat': {
-                            'numberFormat': {
-                                'type': 'CURRENCY',
-                                'pattern': '$#,##0'
-                            }
-                        }
-                    },
-                    'fields': 'userEnteredFormat(numberFormat)'
-                }
-            },
-            # Auto-resize columns
-            {
-                'autoResizeDimensions': {
-                    'dimensions': {
-                        'sheetId': sheet_id,
-                        'dimension': 'COLUMNS',
-                        'startIndex': 0,
-                        'endIndex': 5
-                    }
-                }
-            },
-            # Freeze header row
-            {
-                'updateSheetProperties': {
-                    'properties': {
-                        'sheetId': sheet_id,
-                        'gridProperties': {
-                            'frozenRowCount': 3
-                        }
-                    },
-                    'fields': 'gridProperties.frozenRowCount'
-                }
-            },
-            # Conditional formatting for REMAINING SALARY (green if > 0)
-            {
-                'addConditionalFormatRule': {
-                    'rule': {
-                        'ranges': [{
-                            'sheetId': sheet_id,
-                            'startRowIndex': summary_row + 1,  # REMAINING SALARY row
-                            'endRowIndex': summary_row + 2,
-                            'startColumnIndex': 3,  # Column D (value column)
-                            'endColumnIndex': 4
-                        }],
-                        'booleanRule': {
-                            'condition': {
-                                'type': 'NUMBER_GREATER',
-                                'values': [{'userEnteredValue': '0'}]
-                            },
-                            'format': {
-                                'backgroundColor': {
-                                    'red': 0.7,
-                                    'green': 0.9,
-                                    'blue': 0.7
-                                }
-                            }
-                        }
-                    },
-                    'index': 0
-                }
-            },
-            # Conditional formatting for REMAINING SALARY (red if <= 0)
-            {
-                'addConditionalFormatRule': {
-                    'rule': {
-                        'ranges': [{
-                            'sheetId': sheet_id,
-                            'startRowIndex': summary_row + 1,  # REMAINING SALARY row
-                            'endRowIndex': summary_row + 2,
-                            'startColumnIndex': 3,  # Column D (value column)
-                            'endColumnIndex': 4
-                        }],
-                        'booleanRule': {
-                            'condition': {
-                                'type': 'NUMBER_LESS_THAN_EQ',
-                                'values': [{'userEnteredValue': '0'}]
-                            },
-                            'format': {
-                                'backgroundColor': {
-                                    'red': 0.95,
-                                    'green': 0.7,
-                                    'blue': 0.7
-                                }
-                            }
-                        }
-                    },
-                    'index': 1
-                }
-            }
-        ]
+        format_requests = _create_team_sheet_formatting(sheet_id, num_players)
 
         service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
