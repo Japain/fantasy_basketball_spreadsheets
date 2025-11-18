@@ -23,3 +23,6 @@ league_data/
 
 # Debug scripts
 debug/
+
+# Test output files
+league_extraction_results.txt

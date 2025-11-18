@@ -331,6 +331,13 @@ def main():
                     team_transactions = [tx for tx in transactions if tx.team_id == team.team_id]
                     print(f"  • {team.team_name} ({len(team_transactions)} transaction(s))")
 
+                    # Show transaction details in verbose mode
+                    if args.verbose:
+                        for tx in sorted(team_transactions, key=lambda t: t.timestamp, reverse=True):
+                            tx_time = datetime.fromtimestamp(tx.timestamp).strftime('%m/%d %H:%M')
+                            faab_info = f" (${tx.faab_bid})" if tx.faab_bid else ""
+                            print(f"      - [{tx_time}] {tx.transaction_type.value.upper()}: {tx.player_name}{faab_info}")
+
                 skipped = len(league_data.teams) - len(teams_to_update)
                 if skipped > 0:
                     print(f"  ⊘ Skipped: {skipped} team(s) (no changes)")
