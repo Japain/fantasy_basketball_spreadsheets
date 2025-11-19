@@ -45,7 +45,7 @@ Deploy the application to run automatically on a schedule.
 ---
 
 ### Deployment to Cloud Platform
-**Priority**: Medium | **Complexity**: High
+**Priority**: Low | **Complexity**: High
 
 Deploy application to cloud platform for always-available access.
 
@@ -133,7 +133,7 @@ Post updates to Slack channel.
 ---
 
 ### Discord Integration
-**Priority**: Low | **Complexity**: Low
+**Priority**: High | **Complexity**: Low
 
 Similar to Slack but for Discord servers.
 
@@ -190,7 +190,7 @@ Show transaction activity per team.
 ---
 
 ### Salary Cap Trends
-**Priority**: Medium | **Complexity**: Medium
+**Priority**: Low | **Complexity**: Medium
 
 Track how team salaries change over time.
 
@@ -199,24 +199,6 @@ Track how team salaries change over time.
 - Line chart showing salary cap usage over time
 - Identify teams approaching salary cap
 - Predict future cap issues based on trends
-
----
-
-### Player Value Analysis
-**Priority**: Medium | **Complexity**: Medium
-
-Analyze player value based on salary and performance.
-
-**Metrics**:
-- Salary per fantasy point
-- Value over replacement player
-- ROI analysis (performance vs. cost)
-- Best value players by position
-
-**Integration**:
-- Pull player stats from Yahoo API
-- Calculate fantasy points
-- Compare to salary
 
 ---
 
@@ -364,7 +346,7 @@ Automatic weekly snapshots of all rosters.
 ## 6. User Interface
 
 ### Web Dashboard
-**Priority**: High | **Complexity**: High
+**Priority**: Medium | **Complexity**: High
 
 Create a web interface for easier management.
 
@@ -430,7 +412,7 @@ Create a desktop GUI application.
 ## 7. Advanced Features
 
 ### Trade Analyzer
-**Priority**: Medium | **Complexity**: High
+**Priority**: Low | **Complexity**: High
 
 Analyze proposed trades for fairness and value.
 
@@ -451,7 +433,7 @@ Analyze proposed trades for fairness and value.
 ---
 
 ### Waiver Wire Recommendations
-**Priority**: Medium | **Complexity**: High
+**Priority**: Low | **Complexity**: High
 
 Suggest waiver wire pickups based on team needs.
 
@@ -473,7 +455,7 @@ Suggest waiver wire pickups based on team needs.
 ---
 
 ### Keeper Value Analysis
-**Priority**: Medium | **Complexity**: Medium
+**Priority**: Low | **Complexity**: Medium
 
 Help managers decide which players to keep.
 
@@ -488,46 +470,16 @@ Help managers decide which players to keep.
 ---
 
 ### Auction Draft Helper
-**Priority**: Low | **Complexity**: High
+**Priority**: Medium | **Complexity**: High
 
 Assist during auction draft.
 
 **Features**:
 - Track nominations and winning bids
 - Show remaining budget by team
-- Recommend bid amounts
+- Use provided projection data to project team performance during the draft.
 - Suggest next nomination
 - Real-time roster building strategy
-- Value-based player rankings
-
----
-
-### Category Projections
-**Priority**: Medium | **Complexity**: High
-
-Project fantasy category performance.
-
-**Features**:
-- Integrate player projections
-- Calculate team category totals
-- Compare to league average
-- Identify strengths and weaknesses
-- Suggest roster moves to improve categories
-- "What if" scenario modeling
-
----
-
-### Injury Impact Analysis
-**Priority**: Low | **Complexity**: Medium
-
-Track injury impact on rosters and salary.
-
-**Features**:
-- Highlight injured players
-- Show salary on IL vs. active roster
-- Injury timeline estimates
-- Replacement player suggestions
-- Historical injury data
 
 ---
 
@@ -547,7 +499,7 @@ Export data in additional formats.
 ---
 
 ### API Endpoints
-**Priority**: Medium | **Complexity**: High
+**Priority**: Low | **Complexity**: High
 
 Provide REST API for data access.
 
@@ -626,7 +578,7 @@ Cache frequently accessed data to reduce API calls.
 ---
 
 ### Incremental Transaction Fetching
-**Priority**: Low | **Complexity**: Medium
+**Priority**: Medium | **Complexity**: Medium
 
 Fetch only new transactions, not all transactions each time.
 
@@ -646,7 +598,7 @@ Fetch only new transactions, not all transactions each time.
 ---
 
 ### Parallel Sheet Updates
-**Priority**: Low | **Complexity**: Medium
+**Priority**: Medium | **Complexity**: Medium
 
 Update multiple team sheets in parallel.
 
@@ -728,7 +680,7 @@ Multi-user support with different permission levels.
 ---
 
 ### Health Monitoring Dashboard
-**Priority**: Low | **Complexity**: Medium
+**Priority**: Medium | **Complexity**: Medium
 
 Monitor application health and status.
 
@@ -813,20 +765,6 @@ uv run python main.py --simulate --spreadsheet-id ID
 
 ---
 
-### Automated Documentation
-**Priority**: Low | **Complexity**: Low
-
-Generate documentation from code.
-
-**Tools**:
-- Sphinx for API documentation
-- MkDocs for user documentation
-- Auto-generate from docstrings
-- API endpoint documentation
-- Interactive examples
-
----
-
 ## 12. Mobile & Accessibility
 
 ### Progressive Web App (PWA)
@@ -866,20 +804,23 @@ Native mobile application.
 ## Implementation Priority Matrix
 
 ### High Priority, Low-Medium Complexity
-1. Transaction History Sheet
-2. Change Detection & Diff View
-3. Scheduled Daily Updates (cron)
-4. Email Notifications
+1. Scheduled Daily Updates
+2. Discord Integration
+3. Transaction History Sheet
+4. Change Detection & Diff View
+5. Email Notifications
 
 ### High Priority, High Complexity
-1. Web Dashboard
-2. Multi-League Support
+1. 
+2. 
 
 ### Medium Priority, Low-Medium Complexity
-1. Slack Integration
-2. Export to CSV/Excel
-3. Rollback Capability
-4. Team Transaction Summary
+1. Export to CSV/Excel
+2. Visual Charts & Graphs
+3. Rollback CapabilityTeam Transaction Summary
+4. Incremental Transaction Fetching
+
+## Medium Priority, High Complexity
 
 ### Low Priority (Nice to Have)
 - Everything else marked as Low Priority
