@@ -205,11 +205,9 @@ This error occurs when the yfpy library tries to perform interactive authenticat
 Enter verifier : ERROR: Failed to initialize Yahoo API client: EOF when reading a line
 ```
 
-**Root cause:** The `yahoo_oauth` library (used by yfpy) expects Yahoo OAuth tokens to be in a JSON file (`oauth2.json`), not just environment variables or the `.env` file.
+**Root cause:** The yfpy library needs Yahoo OAuth tokens provided via the `YAHOO_ACCESS_TOKEN_JSON` environment variable (as a JSON string), not as individual environment variables.
 
-**Solution:** The workflow now automatically creates both:
-1. A `.env` file with configuration variables
-2. An `oauth2.json` file with Yahoo OAuth tokens (see "Create Yahoo OAuth token file" step)
+**Solution:** The workflow now automatically creates a `.env` file with a properly formatted `YAHOO_ACCESS_TOKEN_JSON` variable containing all token fields as a JSON string. The yfpy library reads this via its `env_var_fallback` feature (enabled by default).
 
 If you still see this error:
 1. Ensure all Yahoo secrets are set correctly in GitHub Settings → Secrets:
@@ -219,7 +217,7 @@ If you still see this error:
    - `YAHOO_REFRESH_TOKEN`
    - `YAHOO_TOKEN_TIME`
 2. Verify `YAHOO_REFRESH_TOKEN` is present (this is critical for token refresh)
-3. Check that the workflow file includes both the "Create .env file" and "Create Yahoo OAuth token file" steps
+3. Check that the workflow file creates the `.env` file with the `YAHOO_ACCESS_TOKEN_JSON` variable
 
 #### Workflow fails with "Authentication failed"
 
