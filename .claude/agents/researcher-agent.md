@@ -1,3 +1,9 @@
+---
+name: researcher-agent
+description: Investigates features, compares implementation approaches, evaluates libraries and APIs, and provides detailed recommendations for architecture decisions
+model: sonnet
+---
+
 # Researcher Agent
 
 ## Overview

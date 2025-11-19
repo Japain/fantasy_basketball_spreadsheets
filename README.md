@@ -152,6 +152,41 @@ uv run python main.py --create-new
 uv run python main.py --help
 ```
 
+## Automated Daily Updates (GitHub Actions)
+
+You can schedule automatic daily updates of your spreadsheet using GitHub Actions (zero cost):
+
+1. **Complete local setup first** - Authenticate with both Yahoo and Google APIs locally
+2. **Follow the setup guide** - See [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for detailed instructions
+3. **Configure GitHub Secrets** - Add your API credentials and tokens to GitHub
+4. **Enable the workflow** - Push the workflow file to GitHub
+5. **Test and monitor** - Trigger manually first, then monitor scheduled runs
+
+**Benefits:**
+- Runs automatically every day at your chosen time
+- No local machine needed (cloud-based)
+- Free tier is more than sufficient
+- Email notifications on failure
+- Easy to monitor via GitHub Actions UI
+
+**Quick Start:**
+```bash
+# 1. Ensure local authentication works
+uv run python main.py --spreadsheet-id YOUR_ID
+
+# 2. Push workflow to GitHub
+git add .github/workflows/daily-update.yml
+git commit -m "Add daily update workflow"
+git push origin main
+
+# 3. Add secrets to GitHub (see GITHUB_ACTIONS_SETUP.md)
+
+# 4. Test via GitHub Actions UI
+# Go to Actions tab → Daily Fantasy Basketball Update → Run workflow
+```
+
+For complete setup instructions, troubleshooting, and maintenance guide, see **[GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md)**.
+
 ## Example Output
 
 **Generated Spreadsheet Includes:**
@@ -285,6 +320,8 @@ uv run python -m src.auth.google_auth_manual
 - **README.md** - This file - User guide and quick start
 - **TODO.md** - Complete task list and project status
 - **tests/README.md** - Test suite documentation
+- **GITHUB_ACTIONS_SETUP.md** - Complete guide for setting up automated daily updates
+- **DEPLOYMENT_OPTIONS.md** - Research and analysis of deployment options
 
 ### Planning Documents
 - **context/INCREMENTAL_UPDATE_PLAN.md** - Incremental update feature implementation plan (v2.0)

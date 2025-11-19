@@ -1,0 +1,70 @@
+name: Daily Fantasy Basketball Update
+
+on:
+  schedule:
+    # Runs at 8:00 AM UTC daily (3:00 AM EST, 12:00 AM PST)
+    # Adjust the cron schedule as needed for your timezone
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Set up Google credentials
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          mkdir -p credentials
+          echo "$GOOGLE_CREDENTIALS_JSON" > credentials/client_secret.json
+
+      - name: Set up Google token
+        env:
+          GOOGLE_TOKEN_PICKLE_BASE64: ${{ secrets.GOOGLE_TOKEN_PICKLE_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_TOKEN_PICKLE_BASE64" ]; then
+            echo "$GOOGLE_TOKEN_PICKLE_BASE64" | base64 -d > credentials/google_token.pickle
+          fi
+
+      - name: Run update
+        env:
+          YAHOO_CONSUMER_KEY: ${{ secrets.YAHOO_CONSUMER_KEY }}
+          YAHOO_CONSUMER_SECRET: ${{ secrets.YAHOO_CONSUMER_SECRET }}
+          YAHOO_ACCESS_TOKEN: ${{ secrets.YAHOO_ACCESS_TOKEN }}
+          YAHOO_REFRESH_TOKEN: ${{ secrets.YAHOO_REFRESH_TOKEN }}
+          YAHOO_TOKEN_TIME: ${{ secrets.YAHOO_TOKEN_TIME }}
+          NBA_LEAGUE_ID: ${{ secrets.NBA_LEAGUE_ID }}
+          NBA_GAME_ID: ${{ secrets.NBA_GAME_ID }}
+          INITIAL_AUCTION_BUDGET: ${{ secrets.INITIAL_AUCTION_BUDGET }}
+          GOOGLE_CREDENTIALS_PATH: credentials/client_secret.json
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          uv run python main.py --spreadsheet-id "$SPREADSHEET_ID" --verbose
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: |
+            *.log
+            league_data/
+          retention-days: 7
