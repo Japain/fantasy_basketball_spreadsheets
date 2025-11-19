@@ -44,7 +44,7 @@ jobs:
             echo "$GOOGLE_TOKEN_PICKLE_BASE64" | base64 -d > credentials/google_token.pickle
           fi
 
-      - name: Run update
+      - name: Create .env file with Yahoo tokens
         env:
           YAHOO_CONSUMER_KEY: ${{ secrets.YAHOO_CONSUMER_KEY }}
           YAHOO_CONSUMER_SECRET: ${{ secrets.YAHOO_CONSUMER_SECRET }}
@@ -55,6 +55,22 @@ jobs:
           NBA_GAME_ID: ${{ secrets.NBA_GAME_ID }}
           INITIAL_AUCTION_BUDGET: ${{ secrets.INITIAL_AUCTION_BUDGET }}
           GOOGLE_CREDENTIALS_PATH: credentials/client_secret.json
+        run: |
+          cat > .env << EOF
+          YAHOO_CONSUMER_KEY=$YAHOO_CONSUMER_KEY
+          YAHOO_CONSUMER_SECRET=$YAHOO_CONSUMER_SECRET
+          YAHOO_ACCESS_TOKEN=$YAHOO_ACCESS_TOKEN
+          YAHOO_REFRESH_TOKEN=$YAHOO_REFRESH_TOKEN
+          YAHOO_TOKEN_TIME=$YAHOO_TOKEN_TIME
+          NBA_LEAGUE_ID=$NBA_LEAGUE_ID
+          NBA_GAME_ID=$NBA_GAME_ID
+          INITIAL_AUCTION_BUDGET=$INITIAL_AUCTION_BUDGET
+          GOOGLE_CREDENTIALS_PATH=$GOOGLE_CREDENTIALS_PATH
+          GAME_CODE=nba
+          EOF
+
+      - name: Run update
+        env:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: |
           uv run python main.py --spreadsheet-id "$SPREADSHEET_ID" --verbose

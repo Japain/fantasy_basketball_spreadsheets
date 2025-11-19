@@ -197,6 +197,21 @@ You can manually trigger an update anytime:
 
 ### Troubleshooting
 
+#### Workflow fails with "EOF when reading a line" or "Enter verifier" error
+
+This error occurs when the yfpy library tries to perform interactive authentication in GitHub Actions:
+
+```
+Enter verifier : ERROR: Failed to initialize Yahoo API client: EOF when reading a line
+```
+
+**Root cause:** The yfpy library expects Yahoo OAuth tokens to be in a `.env` file, not just environment variables.
+
+**Solution:** The workflow now automatically creates a `.env` file with all tokens before running the Python script (see "Create .env file with Yahoo tokens" step). If you still see this error:
+1. Ensure all Yahoo secrets are set correctly in GitHub Settings → Secrets
+2. Verify `YAHOO_REFRESH_TOKEN` is present (this is critical for token refresh)
+3. Check that the workflow file includes the "Create .env file with Yahoo tokens" step
+
 #### Workflow fails with "Authentication failed"
 
 **Yahoo authentication:**
