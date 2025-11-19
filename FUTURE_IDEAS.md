@@ -6,41 +6,49 @@ This document contains ideas for future enhancements to the Fantasy Basketball R
 
 ## 1. Automation & Deployment
 
-### Scheduled Daily Updates
-**Priority**: High | **Complexity**: Medium
+### ✅ Scheduled Daily Updates - COMPLETED (v2.1.0)
+**Priority**: High | **Complexity**: Medium | **Status**: ✅ Implemented November 2025
 
 Deploy the application to run automatically on a schedule.
 
-**Implementation Options**:
-- **Cron Job** (Linux/WSL)
-  - Set up cron to run `uv run python main.py --spreadsheet-id ID` daily at specific time
-  - Example: `0 8 * * * cd /path/to/fantasy_basketball && uv run python main.py --spreadsheet-id ID`
+**✅ IMPLEMENTED: GitHub Actions**
+- Implemented in v2.1.0 (November 19, 2025)
+- Zero-cost automated daily updates using GitHub Actions
+- Runs at 11:00 AM UTC daily (configurable via cron syntax)
+- Manual trigger capability via GitHub UI
+- Comprehensive setup guide: `GITHUB_ACTIONS_SETUP.md`
+- Deployment options research: `context/DEPLOYMENT_OPTIONS.md`
+- See `CHANGELOG.md` for full implementation details
 
-- **GitHub Actions** (Cloud-based)
-  - Create `.github/workflows/daily-update.yml`
-  - Run on schedule using `schedule: cron: '0 8 * * *'`
-  - Store credentials in GitHub Secrets
-  - Requires setting up OAuth for headless environment
+**Implementation Files**:
+- `.github/workflows/daily-update.yml` - GitHub Actions workflow
+- `GITHUB_ACTIONS_SETUP.md` - Complete setup and troubleshooting guide
+- `context/DEPLOYMENT_OPTIONS.md` - Deployment options analysis
 
-- **AWS Lambda** (Serverless)
-  - Deploy as Lambda function triggered by EventBridge (CloudWatch Events)
-  - Package dependencies with Lambda layer
-  - Store credentials in AWS Secrets Manager
+**Implemented Features**:
+- ✅ Automated execution on schedule (cron-based)
+- ✅ Cloud-based (no local machine required)
+- ✅ OAuth token refresh in headless environment (Yahoo + Google)
+- ✅ Secure credential management (GitHub Secrets)
+- ✅ Error handling and automatic log upload
+- ✅ Email notifications on failure
+- ✅ Built-in monitoring and logging (90-day retention)
+- ✅ Manual trigger capability
+- ✅ Verbose logging with transaction details
 
-- **Google Cloud Run** (Serverless)
-  - Deploy as container on Cloud Run
-  - Trigger via Cloud Scheduler
-  - Natural fit with Google Sheets API
+**Alternative Options Documented** (not implemented):
+- **Cron Job** (Linux/WSL) - Simplest but requires always-on machine
+- **AWS Lambda** (Serverless) - High complexity, unnecessary for this use case
+- **Google Cloud Run** (Serverless) - Excellent Google integration, alternative option
+- **Azure Functions** - Timer reliability concerns
 
-**Benefits**:
-- No manual intervention needed
-- Always up-to-date data
-- Consistent update times
-
-**Challenges**:
-- OAuth token refresh in headless environment
-- Credential management and security
-- Error handling and monitoring
+**Benefits Achieved**:
+- ✅ No manual intervention needed
+- ✅ Always up-to-date data
+- ✅ Consistent update times
+- ✅ Zero cost (within GitHub Actions free tier)
+- ✅ Excellent logging and debugging
+- ✅ Easy updates via git push
 
 ---
 
@@ -804,7 +812,7 @@ Native mobile application.
 ## Implementation Priority Matrix
 
 ### High Priority, Low-Medium Complexity
-1. Scheduled Daily Updates
+1. ~~Scheduled Daily Updates~~ ✅ **COMPLETED in v2.1.0**
 2. Discord Integration
 3. Transaction History Sheet
 4. Change Detection & Diff View
@@ -852,4 +860,4 @@ Add your ideas to this document via pull request!
 
 ---
 
-**Last Updated**: November 18, 2025
+**Last Updated**: November 19, 2025

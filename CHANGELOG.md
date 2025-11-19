@@ -8,6 +8,145 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] - 2025-11-19
+
+### Added - Automated Daily Updates via GitHub Actions
+
+**New feature**: Zero-cost automated daily spreadsheet updates using GitHub Actions
+
+#### Overview
+Added comprehensive GitHub Actions workflow for scheduling automatic daily updates of Google Sheets spreadsheets. This cloud-based solution eliminates the need for a local machine to be running, provides excellent monitoring and logging, and operates entirely within GitHub's free tier.
+
+**Key Features**:
+- 🤖 **Automated execution** - Runs daily at configurable time (currently 11:00 AM UTC)
+- ☁️ **Cloud-based** - No local machine or server required
+- 💰 **Zero cost** - Operates entirely within GitHub Actions free tier (~30 minutes/month usage)
+- 📧 **Email notifications** - Automatic alerts on workflow failures
+- 🎯 **Manual triggers** - Run updates on-demand via GitHub UI
+- 📊 **Built-in monitoring** - Comprehensive logging and workflow run history (90-day retention)
+- 🔐 **Secure** - OAuth tokens and credentials stored in encrypted GitHub Secrets
+
+#### New Files
+- `.github/workflows/daily-update.yml` - GitHub Actions workflow configuration
+  - Automated daily schedule via cron syntax (`0 11 * * *`)
+  - Manual trigger capability via `workflow_dispatch`
+  - Python 3.12 environment setup
+  - `uv` package manager installation and dependency sync
+  - Yahoo OAuth token configuration (using `YAHOO_ACCESS_TOKEN_JSON`)
+  - Google OAuth credentials and token setup
+  - Verbose logging for detailed transaction information
+  - Automatic log upload on failure for debugging
+
+- `GITHUB_ACTIONS_SETUP.md` - Complete setup and troubleshooting guide
+  - Step-by-step setup instructions
+  - OAuth token extraction and configuration
+  - GitHub Secrets setup guide
+  - Workflow testing procedures
+  - Monitoring and maintenance guidance
+  - Comprehensive troubleshooting section
+  - Security best practices
+
+- `context/DEPLOYMENT_OPTIONS.md` - Deployment research and analysis
+  - Evaluation of 5 deployment options (Cron, GitHub Actions, AWS Lambda, Google Cloud Run, Azure Functions)
+  - Detailed technical feasibility analysis
+  - Cost comparison and rankings
+  - Implementation difficulty assessment
+  - Recommendations with decision framework
+  - Implementation guidance for each option
+
+#### Authentication Improvements
+- **Yahoo OAuth**: Implemented `YAHOO_ACCESS_TOKEN_JSON` approach
+  - Workflow creates properly formatted JSON string with all token fields
+  - Leverages yfpy's `env_var_fallback` feature for headless authentication
+  - Eliminates "EOF when reading a line" errors in GitHub Actions
+  - Automatic token refresh using refresh token
+
+- **Google OAuth**: Base64-encoded token persistence
+  - Google token pickle file encoded and stored in GitHub Secrets
+  - Decoded at runtime for seamless authentication
+  - Automatic token refresh via Google OAuth libraries
+
+#### Documentation Updates
+- Updated `README.md` with "Automated Daily Updates (GitHub Actions)" section
+  - Quick start guide
+  - Benefits and features overview
+  - Reference to `GITHUB_ACTIONS_SETUP.md` for complete instructions
+
+- Updated `CLAUDE.md` with GitHub Actions information
+  - Added to development notes
+  - Workflow file location documented
+
+#### Workflow Features
+
+**Scheduling**:
+- Cron-based scheduling with customizable timing
+- Current default: 11:00 AM UTC (6:00 AM EST, 3:00 AM PST)
+- Easy timezone adjustment via cron syntax
+
+**Environment Setup**:
+- Ubuntu latest runner
+- Python 3.12
+- `uv` package manager for fast dependency installation
+- All project dependencies synced automatically
+
+**Secret Management**:
+- 11 encrypted GitHub Secrets for credentials and configuration:
+  - `YAHOO_CONSUMER_KEY`, `YAHOO_CONSUMER_SECRET`
+  - `YAHOO_ACCESS_TOKEN`, `YAHOO_REFRESH_TOKEN`, `YAHOO_TOKEN_TIME`
+  - `NBA_LEAGUE_ID`, `NBA_GAME_ID`, `INITIAL_AUCTION_BUDGET`
+  - `GOOGLE_CREDENTIALS_JSON`, `GOOGLE_TOKEN_PICKLE_BASE64`
+  - `SPREADSHEET_ID`
+
+**Error Handling**:
+- Automatic log and data artifact upload on failure
+- 7-day retention for debugging
+- Email notifications via GitHub Actions
+
+
+#### Testing
+- Manual workflow testing via GitHub Actions UI
+- Verified scheduled execution
+- Confirmed incremental update mode works correctly
+- Validated verbose logging output
+- Tested authentication with Yahoo and Google APIs
+- Verified error handling and log upload on failure
+
+#### Troubleshooting Addressed
+- **Yahoo OAuth authentication errors**: Fixed via `YAHOO_ACCESS_TOKEN_JSON` JSON string approach
+- **"EOF when reading a line" errors**: Resolved by creating `.env` file with properly formatted tokens
+- **Token refresh**: Automatic refresh implemented using refresh tokens
+- **Schedule timing**: Adjusted to 11:00 AM UTC for optimal timing
+
+#### Commits
+- c9a936c - Fix GitHub Actions authentication issue
+- bb2d497 - Fix GitHub Actions OAuth authentication - create oauth2.json file
+- 91c421e - Fix GitHub Actions authentication - use YAHOO_ACCESS_TOKEN_JSON env var
+- 6847edb - Update documentation for YAHOO_ACCESS_TOKEN_JSON approach
+- 085e4e1 - Update daily run time to 11am UTC
+
+#### Usage
+```bash
+# Manual trigger from GitHub Actions UI
+# 1. Go to Actions tab
+# 2. Select "Daily Fantasy Basketball Update"
+# 3. Click "Run workflow"
+
+# Update workflow schedule
+# Edit .github/workflows/daily-update.yml cron expression:
+# - cron: '0 11 * * *'  # 11 AM UTC
+```
+
+#### Cost Analysis
+- **Monthly usage**: ~30 minutes (1 min/day × 30 days)
+- **Free tier**: 2,000 minutes/month (private repos), unlimited (public repos)
+- **Actual cost**: $0/month (well within free tier)
+
+**For complete setup instructions, see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md)**
+
+**For deployment options analysis, see [context/DEPLOYMENT_OPTIONS.md](context/DEPLOYMENT_OPTIONS.md)**
+
+---
+
 ## [2.0.0] - 2025-11-18
 
 ### Added - Incremental Sheet Updates Feature
