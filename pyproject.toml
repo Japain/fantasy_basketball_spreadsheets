@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "discord-webhook>=1.4.1",
     "google-api-python-client>=2.187.0",
     "google-auth>=2.43.0",
     "google-auth-httplib2>=0.2.1",

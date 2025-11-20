@@ -146,10 +146,20 @@ Post updates to Slack channel.
 Similar to Slack but for Discord servers.
 
 **Features**:
-- Webhook-based notifications
-- Embeds with formatted data
-- League-specific channels
+- Post notification when update completes
+- Rich message format with blocks
+- Include key stats and link to spreadsheet
+- Error notifications
 - Role mentions for important updates
+
+**Example Message**:
+```
+📊 Fantasy Basketball Update Complete
+✅ Updated 4 of 16 teams (25% updated)
+📈 6 transactions processed
+🔗 View Spreadsheet
+⏱️ Last update: 15 hours ago
+```
 
 ---
 
