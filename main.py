@@ -18,6 +18,8 @@ from src.sheet_reader import extract_spreadsheet_id_from_url, read_last_run_time
 from src.sheet_updater import update_team_sheet, update_summary_sheet
 from src.transaction_tracker import get_transactions_since, get_affected_team_ids
 from src.google_auth import get_google_sheets_service
+from src.discord_notifier import notify_update_complete, notify_error
+import traceback
 
 logger = get_logger(__name__)
 
@@ -223,6 +225,15 @@ def main():
     except Exception as e:
         print(f"✗ Failed to extract league data: {e}")
         logger.exception("League data extraction failed")
+        # Send Discord error notification
+        try:
+            notify_error(
+                error_message=f"Failed to extract league data from Yahoo API: {str(e)}",
+                error_type="Yahoo API Error",
+                stack_trace=traceback.format_exc()
+            )
+        except Exception as discord_err:
+            logger.warning(f"Discord error notification failed: {discord_err}")
         return 1
 
     # Step 2: Create new spreadsheet or update existing one
@@ -241,6 +252,15 @@ def main():
         except Exception as e:
             print(f"✗ Failed to generate Google Sheets: {e}")
             logger.exception("Spreadsheet generation failed")
+            # Send Discord error notification
+            try:
+                notify_error(
+                    error_message=f"Failed to generate Google Sheets report: {str(e)}",
+                    error_type="Google Sheets Error",
+                    stack_trace=traceback.format_exc()
+                )
+            except Exception as discord_err:
+                logger.warning(f"Discord error notification failed: {discord_err}")
             return 1
 
         # Print success message
@@ -260,6 +280,18 @@ def main():
         print("Open the URL above to view your league report!")
         print("=" * 80)
         print()
+
+        # Send Discord notification for create mode
+        try:
+            notify_update_complete(
+                teams_updated=league_data.num_teams,
+                total_teams=league_data.num_teams,
+                transactions_processed=0,  # Create mode doesn't process transactions
+                spreadsheet_url=f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
+                last_update_hours=0.0  # First run
+            )
+        except Exception as e:
+            logger.warning(f"Discord notification failed (non-critical): {e}")
 
     else:
         # UPDATE MODE: Update existing spreadsheet
@@ -379,9 +411,60 @@ def main():
             print("=" * 80)
             print()
 
+            # Send Discord notification for update mode
+            try:
+                # Calculate hours since last update
+                hours_since_update = 0.0
+                if last_run_timestamp:
+                    now = datetime.now(timezone.utc)
+                    if last_run_timestamp.tzinfo is None:
+                        last_run_timestamp = last_run_timestamp.replace(tzinfo=timezone.utc)
+                    time_delta = now - last_run_timestamp
+                    hours_since_update = time_delta.total_seconds() / 3600
+
+                # Format verbose transaction log if available
+                verbose_log = None
+                if transactions and args.verbose:
+                    log_lines = []
+                    teams_with_transactions = {}
+                    for tx in transactions:
+                        if tx.team_name not in teams_with_transactions:
+                            teams_with_transactions[tx.team_name] = []
+                        teams_with_transactions[tx.team_name].append(tx)
+
+                    for team_name in sorted(teams_with_transactions.keys()):
+                        team_txs = teams_with_transactions[team_name]
+                        log_lines.append(f"• {team_name} ({len(team_txs)} transaction(s))")
+                        for tx in sorted(team_txs, key=lambda t: t.timestamp, reverse=True):
+                            tx_time = datetime.fromtimestamp(tx.timestamp).strftime('%m/%d %H:%M')
+                            faab_info = f" (${tx.faab_bid})" if tx.faab_bid else ""
+                            log_lines.append(f"    - [{tx_time}] {tx.transaction_type.value.upper()}: {tx.player_name}{faab_info}")
+
+                    verbose_log = "\n".join(log_lines)
+
+                notify_update_complete(
+                    teams_updated=len(teams_to_update),
+                    total_teams=league_data.num_teams,
+                    transactions_processed=len(transactions) if transactions else 0,
+                    spreadsheet_url=f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit",
+                    last_update_hours=hours_since_update,
+                    verbose_transaction_log=verbose_log
+                )
+            except Exception as e:
+                logger.warning(f"Discord notification failed (non-critical): {e}")
+
         except Exception as e:
             print(f"✗ Failed to update spreadsheet: {e}")
             logger.exception("Spreadsheet update failed")
+            # Send Discord error notification
+            try:
+                notify_error(
+                    error_message=f"Failed to update existing spreadsheet: {str(e)}",
+                    error_type="Spreadsheet Update Error",
+                    stack_trace=traceback.format_exc()
+                )
+            except Exception as discord_err:
+                logger.warning(f"Discord error notification failed: {discord_err}")
             return 1
 
     return 0
@@ -397,4 +480,13 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception("Unexpected error occurred")
         print(f"\n✗ Unexpected error: {e}")
+        # Send Discord error notification for unexpected errors
+        try:
+            notify_error(
+                error_message=f"Unexpected error in main application: {str(e)}",
+                error_type="Unexpected Error",
+                stack_trace=traceback.format_exc()
+            )
+        except Exception as discord_err:
+            logger.warning(f"Discord error notification failed: {discord_err}")
         sys.exit(1)

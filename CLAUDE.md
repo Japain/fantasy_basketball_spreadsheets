@@ -23,6 +23,9 @@ Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library)
   - `NBA_GAME_ID`: Yahoo game ID (466 for 2024-25 season)
   - `INITIAL_AUCTION_BUDGET`: Initial auction budget for the league (e.g., 225)
   - `GOOGLE_CREDENTIALS_PATH`: Path to Google OAuth credentials JSON
+- Optional environment variables:
+  - `DISCORD_WEBHOOK_URL`: Discord webhook URL for notifications (optional, leave blank to disable)
+  - `DISCORD_ALERT_ROLE_ID`: Discord role ID for error mentions (optional)
 - `credentials/` directory contains:
   - Google OAuth credentials JSON file
   - `google_token.pickle`: Saved Google authentication token (auto-generated)
@@ -128,6 +131,7 @@ fantasy_basketball/
 │   ├── sheet_reader.py            # Read existing sheets (incremental updates) ✅
 │   ├── sheet_updater.py           # Update existing sheets (incremental updates) ✅
 │   ├── transaction_tracker.py     # Track transactions (incremental updates) ✅
+│   ├── discord_notifier.py        # Discord webhook notifications ✅
 │   ├── logger.py                  # Logging configuration ✅
 │   └── __init__.py                # Package init ✅
 ├── tests/                         # Test suite
@@ -161,6 +165,11 @@ fantasy_basketball/
   - **google-auth** (v2.43.0+): Google authentication library
   - **google-auth-httplib2** (v0.2.1+): HTTP library for Google auth
   - **google-auth-oauthlib** (v1.2.2+): OAuth 2.0 helpers for Google auth
+
+- **discord-webhook**: Discord webhook integration for automated notifications (optional)
+  - Sends rich embedded notifications with update summaries
+  - Error alerts with role mentions
+  - Zero cost, minimal setup required
 
 ## Development Notes
 
@@ -212,6 +221,35 @@ When using `--verbose`, shows detailed transaction information:
 - New teams: Automatically creates sheet for new team
 - Removed teams: Old sheets remain (no deletion)
 - Backwards compatibility: Works with old spreadsheets without timestamps
+
+### Discord Notifications (v2.2)
+
+The application includes optional Discord webhook integration for automated notifications.
+
+**Features:**
+- 🔔 **Rich embedded notifications** - Professional update summaries with key metrics
+- 📊 **Efficiency tracking** - Shows teams updated, transactions processed, and efficiency percentage
+- 🚨 **Error alerts** - Automatic error notifications with stack traces
+- 🔗 **Clickable links** - Direct links to spreadsheets and GitHub Actions logs
+- ⏱️ **Time tracking** - Shows hours since last update
+- 📝 **Transaction details** - Optional verbose logs with player names and FAAB bids
+- 💰 **Zero cost** - No API keys, quotas, or billing required
+
+**Configuration:**
+1. Create webhook in Discord channel settings
+2. Add `DISCORD_WEBHOOK_URL` to `.env` or GitHub Secrets
+3. Optional: Add `DISCORD_ALERT_ROLE_ID` for error role mentions
+4. Notifications automatically sent during updates
+
+**Notification Types:**
+- **Success notifications**: Update summaries with efficiency metrics
+- **Error notifications**: Critical alerts with role mentions and stack traces
+- **Verbose mode**: Includes detailed transaction logs when using `--verbose` flag
+
+**Graceful Degradation:**
+- Discord failures never break the main workflow
+- Notifications are completely optional
+- Leave webhook URL blank to disable
 
 ## IMPORTANT: Running Python Code
 

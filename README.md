@@ -20,6 +20,11 @@ A Python application that extracts fantasy basketball league data from Yahoo Fan
 - 🔄 **Automatic Token Refresh** - Tokens refresh automatically, no repeated authentication needed
 - 💻 **Command-Line Interface** - Easy-to-use CLI with customizable options
 - 🚀 **Headless Environment Support** - Works in WSL and server environments without browser callbacks
+- 🔔 **Discord Notifications** - Optional Discord webhook integration for automated updates
+  - Rich embedded notifications with update summaries
+  - Error alerts with role mentions
+  - Efficiency metrics and transaction details
+  - Zero cost, minimal setup required
 
 ## How It Works
 
@@ -75,6 +80,19 @@ uv sync
      ```
      GOOGLE_CREDENTIALS_PATH=credentials/client_secret_*.json
      ```
+
+3. **Discord Notifications (Optional)**:
+   - Open your Discord server → Select channel → Channel Settings → Integrations
+   - Click "Create Webhook" → Name it "Fantasy Basketball Bot"
+   - Copy webhook URL and add to `.env`:
+     ```
+     DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+     ```
+   - *Optional*: For error role mentions, create a role in Discord, enable mentions, and add:
+     ```
+     DISCORD_ALERT_ROLE_ID=123456789012345678
+     ```
+   - Leave blank to disable Discord notifications
 
 ### Authentication
 
@@ -167,6 +185,7 @@ You can schedule automatic daily updates of your spreadsheet using GitHub Action
 - No local machine needed (cloud-based)
 - Free tier is more than sufficient
 - Email notifications on failure
+- Discord notifications for updates and errors (optional)
 - Easy to monitor via GitHub Actions UI
 
 **Quick Start:**
@@ -233,6 +252,7 @@ fantasy_basketball/
       sheet_reader.py        # Read existing sheets (incremental updates)
       sheet_updater.py       # Update existing sheets (incremental updates)
       transaction_tracker.py # Track transactions (incremental updates)
+      discord_notifier.py    # Discord webhook notifications
       logger.py              # Logging configuration
    credentials/               # API credentials (gitignored)
    tests/                     # Test suite
@@ -289,6 +309,7 @@ uv run python -m tests.test_edge_cases               # Edge cases (6 tests)
 - **google-api-python-client** - Google API client
 - **google-auth** - Google authentication
 - **google-auth-oauthlib** - OAuth 2.0 support
+- **discord-webhook** - Discord webhook notifications (optional)
 - **python-dotenv** - Environment variable management
 
 ## Troubleshooting
@@ -343,12 +364,13 @@ uv run python -m src.auth.google_auth_manual
 
 ---
 
-**Status**: ✅ Production-ready with incremental update feature (v2.0)
+**Status**: ✅ Production-ready with Discord notifications (v2.1)
 
 **Recent Updates:**
-- Added incremental update mode for efficient spreadsheet updates
-- 25+ automated tests covering all functionality
-- Enhanced logging with detailed transaction information
-- Backwards compatible with existing spreadsheets
+- Added Discord webhook integration for automated notifications
+- Rich embedded notifications with update summaries and error alerts
+- Optional role mentions for critical errors
+- Zero cost, minimal setup required
+- Seamless GitHub Actions integration
 
 For detailed technical documentation, see [CLAUDE.md](CLAUDE.md).

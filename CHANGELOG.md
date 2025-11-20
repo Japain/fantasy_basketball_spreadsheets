@@ -8,6 +8,110 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.2.0] - 2025-11-20
+
+### Added - Discord Webhook Notifications
+
+**New feature**: Optional Discord webhook integration for automated notifications and error alerts
+
+#### Overview
+Added comprehensive Discord webhook support for sending rich embedded notifications to Discord channels. This zero-cost, minimal-setup integration provides real-time updates on spreadsheet changes, update efficiency, and error alerts with optional role mentions.
+
+**Key Features**:
+- 🔔 **Rich embedded notifications** - Professional-looking update summaries with key metrics
+- 📊 **Update efficiency tracking** - Shows teams updated, transactions processed, and efficiency percentage
+- 🚨 **Error alerts** - Automatic error notifications with stack traces and role mentions
+- 🔗 **Clickable links** - Direct links to updated spreadsheets and GitHub Actions logs
+- ⏱️ **Time tracking** - Shows hours since last update
+- 📝 **Verbose transaction logs** - Optional detailed transaction history in notifications
+- 💰 **Zero cost** - No API keys, quotas, or billing required
+- 🔐 **Secure** - Webhook URLs stored in GitHub Secrets
+
+#### New Files
+- `src/discord_notifier.py` - Discord webhook notification module
+  - `DiscordNotifier` class for managing webhook notifications
+  - `send_update_summary()` - Rich embedded success notifications
+  - `send_error_notification()` - Error alerts with optional role mentions
+  - Convenience functions: `notify_update_complete()` and `notify_error()`
+  - Comprehensive error handling and logging
+  - Automatic graceful degradation if Discord unavailable
+
+- `.env.example` - Environment configuration template
+  - Added `DISCORD_WEBHOOK_URL` configuration
+  - Added `DISCORD_ALERT_ROLE_ID` for error role mentions
+  - Clear documentation for optional Discord setup
+
+#### Modified Files
+- `main.py` - Integrated Discord notifications
+  - Success notifications after create mode
+  - Success notifications after update mode with efficiency metrics
+  - Error notifications for all exception handlers
+  - Verbose transaction logging support for Discord embeds
+  - Hours since last update calculation
+  - Never fails main workflow if Discord unavailable
+
+- `.github/workflows/daily-update.yml` - GitHub Actions support
+  - Added `DISCORD_WEBHOOK_URL` and `DISCORD_ALERT_ROLE_ID` to environment
+  - Fallback curl-based error notification if Python fails
+  - Gracefully handles missing Discord configuration
+
+#### Dependencies
+- Added `discord-webhook` Python library for webhook integration
+
+#### Notification Features
+
+**Success Notifications Include**:
+- Teams updated count (e.g., "4 of 16 (75% efficiency)")
+- Transactions processed count
+- Time since last update
+- Clickable spreadsheet link
+- Optional verbose transaction log with:
+  - Team names and transaction counts
+  - Individual transactions with timestamps
+  - Player names and FAAB bids
+
+**Error Notifications Include**:
+- Error type and message
+- Timestamp
+- Optional stack trace for debugging
+- Link to GitHub Actions logs
+- Optional role mentions for alerts
+
+#### Configuration
+
+**Setup Steps**:
+1. Create webhook in Discord channel settings
+2. Add `DISCORD_WEBHOOK_URL` to `.env` or GitHub Secrets
+3. *Optional*: Create role and add `DISCORD_ALERT_ROLE_ID` for error mentions
+4. Notifications are automatically sent during updates
+
+**Environment Variables**:
+- `DISCORD_WEBHOOK_URL` - Discord webhook URL (optional, leave blank to disable)
+- `DISCORD_ALERT_ROLE_ID` - Discord role ID for error mentions (optional)
+
+#### Rate Limits
+- Per webhook: 5 requests per 2 seconds (not a concern for this use case)
+- This application sends 1-2 messages per day (well under limits)
+
+#### Documentation Updates
+- Updated `README.md` with Discord integration section
+  - Added to features list
+  - Configuration instructions
+  - GitHub Actions benefits updated
+  - Added to dependencies
+
+- Updated project structure to include `discord_notifier.py`
+- Updated status to v2.2 with Discord integration
+
+#### Technical Implementation
+- Rich Discord embeds with color coding (blue for success, red for errors)
+- Automatic timestamp formatting (user's local timezone in Discord)
+- Field truncation to respect Discord's 1024 character limits
+- Graceful error handling (Discord failures never break main workflow)
+- Works seamlessly in both local and GitHub Actions environments
+
+---
+
 ## [2.1.0] - 2025-11-19
 
 ### Added - Automated Daily Updates via GitHub Actions

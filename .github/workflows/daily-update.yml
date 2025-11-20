@@ -55,6 +55,8 @@ jobs:
           NBA_GAME_ID: ${{ secrets.NBA_GAME_ID }}
           INITIAL_AUCTION_BUDGET: ${{ secrets.INITIAL_AUCTION_BUDGET }}
           GOOGLE_CREDENTIALS_PATH: credentials/client_secret.json
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ALERT_ROLE_ID: ${{ secrets.DISCORD_ALERT_ROLE_ID }}
         run: |
           # Create YAHOO_ACCESS_TOKEN_JSON as a JSON string
           YAHOO_ACCESS_TOKEN_JSON=$(cat <<EOF
@@ -70,6 +72,8 @@ jobs:
           NBA_GAME_ID=$NBA_GAME_ID
           INITIAL_AUCTION_BUDGET=$INITIAL_AUCTION_BUDGET
           GOOGLE_CREDENTIALS_PATH=$GOOGLE_CREDENTIALS_PATH
+          DISCORD_WEBHOOK_URL=$DISCORD_WEBHOOK_URL
+          DISCORD_ALERT_ROLE_ID=$DISCORD_ALERT_ROLE_ID
           GAME_CODE=nba
           EOF
 
@@ -78,6 +82,48 @@ jobs:
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
         run: |
           uv run python main.py --spreadsheet-id "$SPREADSHEET_ID" --verbose
+
+      - name: Send Discord error notification (fallback)
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ALERT_ROLE_ID: ${{ secrets.DISCORD_ALERT_ROLE_ID }}
+        run: |
+          # Only send if webhook URL is configured
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            # Format role mention
+            ROLE_MENTION=""
+            if [ -n "$DISCORD_ALERT_ROLE_ID" ]; then
+              ROLE_MENTION="<@&${DISCORD_ALERT_ROLE_ID}> "
+            fi
+
+            # Send error notification via curl
+            curl -X POST "$DISCORD_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"content\": \"${ROLE_MENTION}🚨 **Fantasy Basketball Update Failed**\",
+                \"embeds\": [{
+                  \"title\": \"GitHub Actions Workflow Failed\",
+                  \"description\": \"The automated update workflow encountered an error.\",
+                  \"color\": 16711680,
+                  \"fields\": [
+                    {
+                      \"name\": \"Workflow\",
+                      \"value\": \"${{ github.workflow }}\"
+                    },
+                    {
+                      \"name\": \"Repository\",
+                      \"value\": \"${{ github.repository }}\"
+                    },
+                    {
+                      \"name\": \"📋 Action Required\",
+                      \"value\": \"[View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+                    }
+                  ],
+                  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
+                }]
+              }"
+          fi
 
       - name: Upload logs on failure
         if: failure()
