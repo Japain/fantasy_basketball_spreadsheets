@@ -501,6 +501,19 @@ Assist during auction draft.
 
 ---
 
+### Offseason Support
+**Priority**: High | **Complexity**: Medium
+
+Support league specific changes and updates that happen after the fantasy basketball season is over.
+
+**Features**:
+- For each team allow a space that list all of their current picks and future picks (Yahoo has no concept of these).
+- Add a column to team sheet that tracks the number of years each player was in the league.
+- Peform custom off season price increases based on user supplied league rules.
+- Provide way in spread sheet for users to mark which players should be keepers for next year.
+
+---
+
 ## 8. Integration & Export
 
 ### Export to CSV/Excel
@@ -825,8 +838,9 @@ Native mobile application.
 1. ~~Scheduled Daily Updates~~ ✅ **COMPLETED in v2.1.0**
 2. ~~Discord Integration~~ ✅ **COMPLETED in v2.2.0** 
 3. Transaction History Sheet
-4. Change Detection & Diff View
-5. Email Notifications
+4. Offseason Support
+5. Change Detection & Diff View
+6. Email Notifications
 
 ### High Priority, High Complexity
 1. 
