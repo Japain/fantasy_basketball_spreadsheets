@@ -140,17 +140,17 @@ Post updates to Slack channel.
 
 ---
 
-### Discord Integration
-**Priority**: High | **Complexity**: Low
+### ✅ Discord Integration - COMPLETED (v2.1.0)
+**Priority**: High | **Complexity**: Low ✅ Implemented November 2025
 
 Similar to Slack but for Discord servers.
 
 **Features**:
-- Post notification when update completes
-- Rich message format with blocks
-- Include key stats and link to spreadsheet
-- Error notifications
-- Role mentions for important updates
+- ✅ Post notification when update completes
+- ✅ Rich message format with blocks
+- ✅ Include key stats and link to spreadsheet
+- ✅ Error notifications
+- ✅ Role mentions for important updates
 
 **Example Message**:
 ```
@@ -823,7 +823,7 @@ Native mobile application.
 
 ### High Priority, Low-Medium Complexity
 1. ~~Scheduled Daily Updates~~ ✅ **COMPLETED in v2.1.0**
-2. Discord Integration
+2. ~~Discord Integration~~ ✅ **COMPLETED in v2.2.0** 
 3. Transaction History Sheet
 4. Change Detection & Diff View
 5. Email Notifications
@@ -870,4 +870,4 @@ Add your ideas to this document via pull request!
 
 ---
 
-**Last Updated**: November 19, 2025
+**Last Updated**: November 21, 2025
