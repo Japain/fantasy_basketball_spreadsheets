@@ -26,3 +26,6 @@ debug/
 
 # Test output files
 league_extraction_results.txt
+
+# Temporary token files (used for GitHub Actions setup)
+google_token_base64.txt

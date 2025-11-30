@@ -1,9 +1,19 @@
 """Manual Google OAuth authentication for headless/WSL environments.
 
-This script handles Google OAuth authentication when browser callbacks don't work
-(e.g., WSL, headless servers, or environments without GUI).
+⚠️ DEPRECATION WARNING ⚠️
+This script uses Google's Out-of-Band (OOB) OAuth flow, which was deprecated
+by Google in 2022 and no longer works. You will get a "400: invalid_request"
+error stating "The out-of-band (OOB) flow has been blocked."
 
-Usage:
+RECOMMENDED ALTERNATIVE:
+Instead of this script, use the standard OAuth flow via main.py:
+    uv run python main.py
+
+This will open a browser window for authentication and works in WSL environments.
+If you're in a truly headless environment (no browser access), consider using
+Workload Identity Federation for GitHub Actions instead.
+
+Usage (DEPRECATED):
     uv run python -m src.auth.google_auth_manual
 """
 

@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed - Google OAuth Token Expiration Issue
+
+**Documentation update**: Resolved weekly Google OAuth token expiration in GitHub Actions
+
+#### Problem
+Users experienced Google authentication failures every 7 days when running the GitHub Actions workflow, requiring manual re-authentication and regeneration of the `GOOGLE_TOKEN_PICKLE_BASE64` secret.
+
+#### Root Cause
+Google OAuth apps in "Testing" mode issue refresh tokens that expire after exactly 7 days. The application was refreshing access tokens correctly, but the underlying refresh token itself expired weekly.
+
+#### Solution
+Changed Google OAuth app from "Testing" to "Production" status in Google Cloud Console. Production mode refresh tokens last indefinitely (until revoked or 6+ months of inactivity), eliminating the need for weekly re-authentication.
+
+#### Documentation Updates
+- **GITHUB_ACTIONS_SETUP.md**:
+  - Added requirement to verify OAuth app is in Production status (Prerequisites)
+  - Updated Google OAuth token setup instructions with status verification
+  - Enhanced Token Refresh section with clear lifetime expectations
+  - Added new troubleshooting entry for 7-day token expiration issue
+
+- **CLAUDE.md**:
+  - Added IMPORTANT notice about Production status requirement in Authentication section
+  - Updated authentication instructions to use `main.py` instead of deprecated `google_auth_manual`
+  - Clarified token lifetime differences between Testing and Production modes
+  - Noted deprecation of OOB authentication flow
+
+- **src/auth/google_auth_manual.py**:
+  - Added deprecation warning about Google's OOB flow being blocked
+  - Recommended alternative authentication methods
+
+#### Impact
+- ✅ Eliminates weekly manual token regeneration requirement
+- ✅ Reduces maintenance burden for GitHub Actions automation
+- ✅ Provides clear troubleshooting guidance for future users
+- ✅ Documents Google's OOB authentication deprecation
+
 ---
 
 ## [2.2.0] - 2025-11-20

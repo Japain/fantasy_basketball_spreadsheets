@@ -18,6 +18,11 @@ Before setting up GitHub Actions, you must:
 2. Have a working `.env` file with all credentials
 3. Have successfully run `uv run python main.py` locally at least once
 4. Have your code pushed to a GitHub repository
+5. **IMPORTANT**: Ensure your Google OAuth app is in "Production" status (not "Testing")
+   - Go to [Google Cloud Console](https://console.cloud.google.com/) → "APIs & Services" → "OAuth consent screen"
+   - If status is "Testing", click "Publish App" to change to "In production"
+   - **Why**: Testing mode causes refresh tokens to expire after 7 days, requiring weekly re-authentication
+   - Production mode tokens last indefinitely (until revoked or 6+ months of inactivity)
 
 ## Setup Steps
 
@@ -43,6 +48,13 @@ You should see:
 
 #### Google OAuth Tokens
 
+**First, verify your OAuth app is in Production status:**
+```bash
+# Check in Google Cloud Console:
+# "APIs & Services" → "OAuth consent screen"
+# Publishing status should be "In production" (NOT "Testing")
+```
+
 You need to prepare two files:
 
 1. **Google Credentials JSON** (client secret):
@@ -53,6 +65,10 @@ cat credentials/client_secret_*.json
 
 2. **Google Token Pickle** (authentication token):
 ```bash
+# If you just changed OAuth status from Testing to Production, re-authenticate:
+# rm credentials/google_token.pickle
+# uv run python main.py  # Will trigger authentication flow
+
 # Encode the token file as base64
 base64 -w 0 credentials/google_token.pickle > google_token_base64.txt
 cat google_token_base64.txt
@@ -183,19 +199,55 @@ You can manually trigger an update anytime:
 - If you get authentication errors, re-run `uv run python -m src.auth.auth_with_code` locally and update the secrets
 
 **Google tokens:**
-- Google tokens refresh automatically via the `google_token.pickle` file
-- If you get Google auth errors, delete the secret and re-authenticate:
-  ```bash
-  # Re-authenticate locally
-  uv run python -m src.auth.google_auth_manual
+- **Production mode** (recommended): Tokens last indefinitely until revoked or 6+ months of inactivity
+- **Testing mode** (NOT recommended): Tokens expire after 7 days, requiring weekly re-authentication
+- Google access tokens (1 hour) refresh automatically via the `google_token.pickle` file stored in GitHub Secrets
 
-  # Re-encode the token
-  base64 -w 0 credentials/google_token.pickle > google_token_base64.txt
+**If your OAuth app is in Production mode**, you should rarely need to re-authenticate. If you get Google auth errors:
+1. Verify OAuth app is still in Production status (Google Cloud Console → OAuth consent screen)
+2. If still having issues, re-authenticate locally:
+   ```bash
+   # Delete old token
+   rm credentials/google_token.pickle
 
-  # Update the GOOGLE_TOKEN_PICKLE_BASE64 secret on GitHub
-  ```
+   # Re-authenticate (browser window will open)
+   uv run python main.py
+
+   # Re-encode the token
+   base64 -w 0 credentials/google_token.pickle > google_token_base64.txt
+
+   # Update the GOOGLE_TOKEN_PICKLE_BASE64 secret on GitHub
+   ```
+
+**If you're experiencing weekly token expiration:**
+- Your OAuth app is likely in "Testing" mode
+- Change to "Production" mode in Google Cloud Console (see Prerequisites above)
+- Re-authenticate after changing status to generate a new Production-mode token
 
 ### Troubleshooting
+
+#### Google tokens expire every 7 days (requires weekly re-authentication)
+
+**Symptom:** Workflow succeeds for 7 days, then fails with Google authentication errors. You need to manually regenerate `GOOGLE_TOKEN_PICKLE_BASE64` weekly.
+
+**Root cause:** Your Google OAuth app is in "Testing" mode, which causes refresh tokens to expire after exactly 7 days.
+
+**Solution:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → "APIs & Services" → "OAuth consent screen"
+2. Check "Publishing status" - if it says "Testing", click "Publish App" to change to "In production"
+3. Re-authenticate locally to generate a new Production-mode token:
+   ```bash
+   rm credentials/google_token.pickle
+   uv run python main.py  # Browser window will open for authentication
+   ```
+4. Re-encode and update the GitHub secret:
+   ```bash
+   base64 -w 0 credentials/google_token.pickle > google_token_base64.txt
+   # Update GOOGLE_TOKEN_PICKLE_BASE64 secret on GitHub with the new value
+   ```
+5. Test the workflow manually to verify it works
+
+**After this fix:** Tokens will last indefinitely (until revoked or 6+ months of inactivity), eliminating weekly re-authentication.
 
 #### Workflow fails with "EOF when reading a line" or "Enter verifier" error
 

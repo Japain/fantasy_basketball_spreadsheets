@@ -77,9 +77,14 @@ uv run python main.py --help
 - If tokens expire, use: `uv run python -m src.auth.auth_with_code`
 
 **Google OAuth:**
-- First-time authentication: `uv run python -m src.auth.google_auth_manual`
+- **IMPORTANT**: Ensure your OAuth app is in "Production" status (not "Testing")
+  - Google Cloud Console → "APIs & Services" → "OAuth consent screen"
+  - Testing mode causes tokens to expire every 7 days
+  - Production mode tokens last indefinitely
+- First-time authentication: `uv run python main.py` (will open browser for OAuth)
 - Tokens are saved to `credentials/google_token.pickle`
-- Tokens refresh automatically
+- Tokens refresh automatically (access tokens expire every 1 hour, refresh tokens in Production mode last indefinitely)
+- Note: `src.auth.google_auth_manual` is deprecated (uses OOB flow which Google blocked)
 
 ### Managing Dependencies
 ```bash
