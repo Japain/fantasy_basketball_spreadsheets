@@ -72,17 +72,408 @@ def _find_sheet_id_by_name(service: Any, spreadsheet_id: str, sheet_name: str) -
         raise SheetUpdateError(error_msg) from e
 
 
+def _build_sheet_metadata_cache(service: Any, spreadsheet_id: str) -> dict:
+    """
+    Build a cache of team_id to (sheet_id, sheet_title) mappings.
+
+    Reads cell A1 from each sheet to extract team_id metadata. This allows
+    efficient ID-based sheet lookups and is used to identify orphaned sheets.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+
+    Returns:
+        dict: Mapping of team_id (str) to tuple of (sheet_id, sheet_title).
+              Example: {"1": (123456, "Team Name"), "2": (789012, "Another Team")}
+              Sheets without valid team_id metadata are excluded.
+
+    Raises:
+        SheetUpdateError: If API call fails.
+    """
+    try:
+        # Get all sheets in the spreadsheet
+        spreadsheet = service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id
+        ).execute()
+
+        sheets = spreadsheet.get('sheets', [])
+        metadata_cache = {}
+
+        for sheet in sheets:
+            properties = sheet.get('properties', {})
+            sheet_id = properties.get('sheetId')
+            sheet_title = properties.get('title')
+
+            # Skip Summary sheet
+            if sheet_title == 'Summary':
+                continue
+
+            # Read cell A1 to get team_id metadata
+            try:
+                result = service.spreadsheets().values().get(
+                    spreadsheetId=spreadsheet_id,
+                    range=f"'{sheet_title}'!A1"
+                ).execute()
+
+                values = result.get('values', [])
+                if values and values[0]:
+                    cell_value = str(values[0][0])
+
+                    # Check if cell contains team_id metadata
+                    if cell_value.startswith('TEAM_ID:'):
+                        team_id = cell_value.split(':', 1)[1].strip()
+                        metadata_cache[team_id] = (sheet_id, sheet_title)
+                        logger.debug(f"Cached metadata: team_id={team_id}, sheet='{sheet_title}' (ID: {sheet_id})")
+                    else:
+                        logger.debug(f"Sheet '{sheet_title}' has no team_id metadata in A1")
+                else:
+                    logger.debug(f"Sheet '{sheet_title}' has empty cell A1")
+
+            except HttpError as e:
+                # Non-critical error - log and continue
+                logger.warning(f"Could not read metadata from sheet '{sheet_title}': {e}")
+                continue
+
+        logger.debug(f"Built metadata cache with {len(metadata_cache)} entries")
+        return metadata_cache
+
+    except HttpError as e:
+        error_msg = f"Failed to build sheet metadata cache: {e}"
+        logger.error(error_msg)
+        raise SheetUpdateError(error_msg) from e
+
+
+def _find_sheet_by_team_id(service: Any, spreadsheet_id: str, team_id: str) -> Optional[tuple]:
+    """
+    Find a sheet by its team_id metadata stored in cell A1.
+
+    This is the primary method for identifying team sheets, replacing name-based
+    lookups which fail when teams are renamed.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+        team_id: The Yahoo team ID to search for.
+
+    Returns:
+        Optional[tuple]: (sheet_id, sheet_title) if found, None otherwise.
+
+    Raises:
+        SheetUpdateError: If API call fails.
+    """
+    try:
+        # Build metadata cache for all sheets
+        metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
+
+        # Lookup by team_id
+        if team_id in metadata_cache:
+            sheet_id, sheet_title = metadata_cache[team_id]
+            logger.debug(f"Found sheet by team_id={team_id}: '{sheet_title}' (ID: {sheet_id})")
+            return (sheet_id, sheet_title)
+
+        logger.debug(f"No sheet found for team_id={team_id}")
+        return None
+
+    except SheetUpdateError:
+        # Re-raise SheetUpdateError as-is
+        raise
+    except Exception as e:
+        error_msg = f"Failed to find sheet by team_id={team_id}: {e}"
+        logger.error(error_msg)
+        raise SheetUpdateError(error_msg) from e
+
+
+def _detect_team_rename(current_sheet_title: str, current_team_name: str) -> bool:
+    """
+    Detect if a team has been renamed by comparing sheet title with current name.
+
+    Args:
+        current_sheet_title: The current title of the sheet in Google Sheets.
+        current_team_name: The current team name from Yahoo API.
+
+    Returns:
+        bool: True if team was renamed (names don't match), False otherwise.
+    """
+    # Simple string comparison - if they don't match, team was renamed
+    return current_sheet_title != current_team_name
+
+
+def _rename_sheet(service: Any, spreadsheet_id: str, sheet_id: int, new_title: str) -> None:
+    """
+    Rename a sheet to match the current team name.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+        sheet_id: The sheet ID to rename.
+        new_title: The new title for the sheet.
+
+    Raises:
+        SheetUpdateError: If rename fails (non-critical - logged but doesn't stop update).
+    """
+    try:
+        # Truncate title to Google Sheets 100-character limit
+        truncated_title = new_title[:100]
+
+        # Create rename request
+        requests = [{
+            'updateSheetProperties': {
+                'properties': {
+                    'sheetId': sheet_id,
+                    'title': truncated_title
+                },
+                'fields': 'title'
+            }
+        }]
+
+        # Execute rename
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': requests}
+        ).execute()
+
+        logger.info(f"✓ Renamed sheet (ID: {sheet_id}) to: '{truncated_title}'")
+
+    except HttpError as e:
+        # Log error but don't fail the update - rename is cosmetic
+        error_msg = f"Failed to rename sheet (ID: {sheet_id}) to '{new_title}': {e}"
+        logger.error(error_msg)
+        # Don't raise - allow update to continue
+
+
+def _migrate_sheet_to_id_based(service: Any, spreadsheet_id: str, sheet_id: int, team: Team) -> None:
+    """
+    Migrate an existing sheet to ID-based tracking by adding team_id metadata to cell A1.
+
+    This function handles backwards compatibility with sheets created before the
+    team_id metadata feature was added. It reads existing data, inserts the team_id
+    in column A, writes back the data, and applies invisible formatting to A1.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+        sheet_id: The sheet ID to migrate.
+        team: Team object with team_id and team_name.
+
+    Raises:
+        SheetUpdateError: If migration fails.
+    """
+    try:
+        logger.info(f"Migrating sheet '{team.team_name}' (team_id={team.team_id}) to ID-based tracking...")
+
+        # Read existing data from the sheet
+        sheet_name = team.team_name[:100]  # Use truncated name for range
+        result = service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=f"'{sheet_name}'!A1:Z1000"
+        ).execute()
+
+        existing_data = result.get('values', [])
+
+        if not existing_data:
+            logger.warning(f"Sheet '{sheet_name}' has no data to migrate")
+            return
+
+        # Insert team_id metadata in column A of first row
+        if len(existing_data) > 0:
+            existing_data[0].insert(0, f"TEAM_ID:{team.team_id}")
+        else:
+            existing_data.append([f"TEAM_ID:{team.team_id}"])
+
+        # Write back the data with metadata
+        service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=f"'{sheet_name}'!A1",
+            valueInputOption='USER_ENTERED',
+            body={'values': existing_data}
+        ).execute()
+
+        # Apply invisible formatting to A1 (white text on white background)
+        format_request = {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': 0,
+                    'endRowIndex': 1,
+                    'startColumnIndex': 0,
+                    'endColumnIndex': 1
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'textFormat': {
+                            'foregroundColor': {'red': 1.0, 'green': 1.0, 'blue': 1.0},
+                            'fontSize': 1
+                        },
+                        'backgroundColor': {'red': 1.0, 'green': 1.0, 'blue': 1.0}
+                    }
+                },
+                'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+            }
+        }
+
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': [format_request]}
+        ).execute()
+
+        logger.info(f"✓ Migration complete for '{team.team_name}' (team_id={team.team_id})")
+
+    except Exception as e:
+        error_msg = f"Failed to migrate sheet for team {team.team_name} (team_id={team.team_id}): {e}"
+        logger.error(error_msg)
+        raise SheetUpdateError(error_msg) from e
+
+
+def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids: set, current_team_names: set) -> int:
+    """
+    Identify and delete sheets for teams that no longer exist in the league.
+
+    Orphaned sheets occur when teams are renamed (old sheet remains) or removed
+    from the league. This function safely identifies true orphans:
+    1. Sheets with team_id metadata not matching current team IDs (removed teams)
+    2. Duplicate sheets where the current team name already has a sheet (rename leftovers)
+
+    IMPORTANT: Only deletes sheets when we're certain they're orphaned. Does NOT
+    delete old-format sheets if they might be the only sheet for a current team.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+        current_team_ids: Set of team IDs currently in the league.
+        current_team_names: Set of team names currently in the league.
+
+    Returns:
+        int: Number of sheets deleted.
+
+    Raises:
+        SheetUpdateError: If cleanup fails (non-critical - logged but doesn't stop update).
+    """
+    try:
+        # Get all sheets in the spreadsheet
+        spreadsheet = service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id
+        ).execute()
+        sheets = spreadsheet.get('sheets', [])
+
+        # Build sets of sheets with/without metadata
+        sheets_with_metadata = {}  # team_id -> (sheet_id, sheet_title)
+        sheets_without_metadata = []  # [(sheet_id, sheet_title)]
+        sheets_by_name = {}  # sheet_title -> (sheet_id, has_metadata)
+
+        # Categorize all sheets
+        for sheet in sheets:
+            properties = sheet.get('properties', {})
+            sheet_id = properties.get('sheetId')
+            sheet_title = properties.get('title')
+
+            # Skip Summary sheet
+            if sheet_title == 'Summary':
+                continue
+
+            # Read cell A1 to check for metadata
+            try:
+                result = service.spreadsheets().values().get(
+                    spreadsheetId=spreadsheet_id,
+                    range=f"'{sheet_title}'!A1"
+                ).execute()
+
+                values = result.get('values', [])
+                cell_value = str(values[0][0]) if values and values[0] else ""
+
+                if cell_value.startswith('TEAM_ID:'):
+                    # Sheet has metadata
+                    team_id = cell_value.split(':', 1)[1].strip()
+                    sheets_with_metadata[team_id] = (sheet_id, sheet_title)
+                    sheets_by_name[sheet_title] = (sheet_id, True)
+                    logger.debug(f"Found sheet with metadata: '{sheet_title}' (team_id={team_id})")
+                else:
+                    # Old sheet without metadata
+                    sheets_without_metadata.append((sheet_id, sheet_title))
+                    sheets_by_name[sheet_title] = (sheet_id, False)
+                    logger.debug(f"Found sheet without metadata: '{sheet_title}'")
+
+            except Exception as e:
+                # Non-critical error reading sheet
+                logger.warning(f"Could not check sheet '{sheet_title}': {e}")
+                continue
+
+        orphaned_sheets = []
+
+        # Rule 1: Sheets with metadata for teams not in current league (removed teams)
+        for team_id, (sheet_id, sheet_title) in sheets_with_metadata.items():
+            if team_id not in current_team_ids:
+                orphaned_sheets.append((sheet_id, sheet_title, f"removed team (team_id={team_id})"))
+                logger.debug(f"Identified orphan: '{sheet_title}' - team_id={team_id} not in league")
+
+        # Rule 2: Old-format sheets that are DUPLICATES of current team names
+        # Only delete if the current team name already has a sheet (meaning this is a leftover)
+        for sheet_id, sheet_title in sheets_without_metadata:
+            # Check if this sheet name doesn't match any current team
+            if sheet_title not in current_team_names:
+                # Check if ANY current team already has a sheet with metadata
+                # If all current teams have metadata sheets, this old sheet is truly orphaned
+                # But if some current teams are missing sheets, this might be one of them
+
+                # Count how many current teams already have sheets
+                teams_with_sheets = len(sheets_with_metadata)
+                teams_without_sheets = len(current_team_ids) - teams_with_sheets
+
+                if teams_without_sheets == 0:
+                    # All teams have sheets with metadata, so this is truly orphaned
+                    orphaned_sheets.append((sheet_id, sheet_title, "old format, all teams accounted for"))
+                    logger.debug(f"Identified orphan: '{sheet_title}' - old format and all teams have sheets")
+                else:
+                    # Some teams don't have sheets yet, so this might be one of them (renamed)
+                    # Don't delete it - it will be migrated
+                    logger.debug(f"Keeping '{sheet_title}' - might be renamed sheet for team without sheet yet")
+
+        if not orphaned_sheets:
+            logger.debug("No orphaned sheets found")
+            return 0
+
+        # Print user-friendly summary before deletion
+        print(f"→ Found {len(orphaned_sheets)} orphaned sheet(s) from removed teams:")
+        for _, sheet_title, reason in orphaned_sheets:
+            print(f"  • {sheet_title} ({reason})")
+        print("  Deleting orphaned sheets...")
+
+        # Create batch delete requests
+        delete_requests = []
+        for sheet_id, sheet_title, reason in orphaned_sheets:
+            delete_requests.append({
+                'deleteSheet': {'sheetId': sheet_id}
+            })
+            logger.info(f"Deleting orphaned sheet: '{sheet_title}' ({reason}, sheet_id={sheet_id})")
+
+        # Execute batch deletion
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': delete_requests}
+        ).execute()
+
+        logger.info(f"✓ Deleted {len(orphaned_sheets)} orphaned sheet(s)")
+        return len(orphaned_sheets)
+
+    except Exception as e:
+        error_msg = f"Failed to cleanup orphaned sheets: {e}"
+        logger.error(error_msg)
+        # Log error but don't raise - cleanup is non-critical
+        return 0
+
+
 def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
     """
     Update an existing team sheet with new roster data.
 
     If the sheet doesn't exist (e.g., new team added to league), it will be created.
     The update process:
-    1. Find the sheet by team name
-    2. If not found, create a new sheet
-    3. Clear existing data
-    4. Write new data
-    5. Apply formatting
+    1. Find the sheet by team_id (primary) or team name (backwards compatibility)
+    2. Detect and handle team renames
+    3. If not found, create a new sheet
+    4. Clear existing data
+    5. Write new data
+    6. Apply formatting
 
     Args:
         service: Google Sheets API service object.
@@ -92,32 +483,54 @@ def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
     Raises:
         SheetUpdateError: If update fails.
     """
-    logger.info(f"Updating sheet for team: {team.team_name}")
+    logger.info(f"Updating sheet for team: {team.team_name} (team_id={team.team_id})")
 
     try:
-        # Find the sheet by team name
-        sheet_id = _find_sheet_id_by_name(service, spreadsheet_id, team.team_name)
+        # Try to find sheet by team_id (ID-based lookup)
+        result = _find_sheet_by_team_id(service, spreadsheet_id, team.team_id)
 
-        # If sheet doesn't exist, create it
-        if sheet_id is None:
-            logger.info(f"Sheet for '{team.team_name}' not found. Creating new sheet...")
-            create_team_sheet(service, spreadsheet_id, team)
-            logger.info(f"✓ Created new sheet for: {team.team_name}")
-            return
+        if result is None:
+            # Backwards compatibility: fallback to name-based lookup
+            logger.debug(f"No sheet found by team_id={team.team_id}, trying name-based lookup...")
+            sheet_id = _find_sheet_id_by_name(service, spreadsheet_id, team.team_name)
+
+            if sheet_id is not None:
+                # Found by name - migrate to ID-based tracking
+                logger.info(f"Migrating sheet '{team.team_name}' to ID-based tracking...")
+                _migrate_sheet_to_id_based(service, spreadsheet_id, sheet_id, team)
+                sheet_title = team.team_name
+            else:
+                # Sheet doesn't exist - create new one
+                logger.info(f"Sheet for '{team.team_name}' (team_id={team.team_id}) not found. Creating new sheet...")
+                create_team_sheet(service, spreadsheet_id, team)
+                logger.info(f"✓ Created new sheet for: {team.team_name}")
+                return
+        else:
+            # Found by team_id
+            sheet_id, sheet_title = result
+            logger.debug(f"Found sheet by team_id={team.team_id}: '{sheet_title}' (sheet_id={sheet_id})")
+
+            # Check if team was renamed
+            if _detect_team_rename(sheet_title, team.team_name):
+                logger.info(f"Team renamed: '{sheet_title}' → '{team.team_name}' (team_id={team.team_id})")
+                _rename_sheet(service, spreadsheet_id, sheet_id, team.team_name)
+                sheet_title = team.team_name  # Update for subsequent operations
 
         # Clear existing data in the sheet
-        clear_range = f"'{team.team_name}'!A1:Z1000"
+        # Use current sheet_title for range (might be old name if rename failed, but that's okay)
+        clear_range = f"'{sheet_title}'!A1:Z1000"
         service.spreadsheets().values().clear(
             spreadsheetId=spreadsheet_id,
             range=clear_range
         ).execute()
-        logger.debug(f"Cleared existing data in '{team.team_name}'")
+        logger.debug(f"Cleared existing data in '{sheet_title}'")
 
-        # Generate new data
+        # Generate new data (includes team_id metadata)
         values = _create_team_sheet_data(team)
 
         # Write new data to the sheet
-        range_name = f"'{team.team_name}'!A1"
+        # Note: If rename succeeded, use new name; if failed, use old name
+        range_name = f"'{sheet_title}'!A1"
         body = {'values': values}
 
         service.spreadsheets().values().update(
@@ -126,7 +539,7 @@ def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
             valueInputOption='USER_ENTERED',
             body=body
         ).execute()
-        logger.debug(f"Wrote new data to '{team.team_name}'")
+        logger.debug(f"Wrote new data to '{sheet_title}'")
 
         # Apply formatting
         num_players = len(team.roster)
@@ -136,12 +549,12 @@ def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
             spreadsheetId=spreadsheet_id,
             body={'requests': format_requests}
         ).execute()
-        logger.debug(f"Applied formatting to '{team.team_name}'")
+        logger.debug(f"Applied formatting to '{sheet_title}'")
 
         logger.info(f"✓ Updated sheet for: {team.team_name} ({num_players} players, ${team.total_salary})")
 
     except Exception as e:
-        error_msg = f"Failed to update team sheet for {team.team_name}: {e}"
+        error_msg = f"Failed to update team sheet for {team.team_name} (team_id={team.team_id}): {e}"
         logger.error(error_msg)
         raise SheetUpdateError(error_msg) from e
 

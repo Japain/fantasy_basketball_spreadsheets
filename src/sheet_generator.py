@@ -458,6 +458,42 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
         raise SheetGenerationError(error_msg) from e
 
 
+def _get_team_id_cell_formatting(sheet_id: int) -> dict:
+    """
+    Create formatting request for team_id metadata cell (A1).
+
+    Makes the cell invisible by applying white text on white background with 1pt font.
+    This allows us to store team_id metadata without it being visible to users.
+
+    Args:
+        sheet_id: The Google Sheets sheet ID.
+
+    Returns:
+        dict: Formatting request for batchUpdate to make cell A1 invisible.
+    """
+    return {
+        'repeatCell': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': 0,
+                'endRowIndex': 1,
+                'startColumnIndex': 0,
+                'endColumnIndex': 1
+            },
+            'cell': {
+                'userEnteredFormat': {
+                    'textFormat': {
+                        'foregroundColor': {'red': 1.0, 'green': 1.0, 'blue': 1.0},
+                        'fontSize': 1
+                    },
+                    'backgroundColor': {'red': 1.0, 'green': 1.0, 'blue': 1.0}
+                }
+            },
+            'fields': 'userEnteredFormat(textFormat,backgroundColor)'
+        }
+    }
+
+
 def _create_team_sheet_data(team: Team) -> List[List[Any]]:
     """
     Create the data array for a team sheet.
@@ -467,27 +503,29 @@ def _create_team_sheet_data(team: Team) -> List[List[Any]]:
 
     Returns:
         List[List[Any]]: 2D array of values for the team sheet, including:
-            - Title row with team name and manager
+            - Title row with team_id metadata (invisible) and team name/manager
             - Blank row
             - Header row with column names
             - Player rows (sorted by salary, descending)
             - Blank row
             - Summary rows (total salary, remaining salary, FAAB)
     """
-    # Prepare roster data
+    # Prepare roster data with team_id metadata in column A
+    # Row 1: Team_id (A1) and team name (B1)
     values = [
-        [f"{team.team_name} ({team.manager_name})"],
-        [],
-        ["Player Name", "Position", "Slot", "Salary", "Source"],
+        [f"TEAM_ID:{team.team_id}", f"{team.team_name} ({team.manager_name})"],
+        [""],  # Row 2: Empty cell in A2 to maintain alignment
+        ["", "Player Name", "Position", "Slot", "Salary", "Source"],  # Row 3: Empty A3, then headers in B-F
     ]
 
     # Sort roster by salary (descending)
     sorted_roster = sorted(team.roster, key=lambda p: p.salary, reverse=True)
 
-    # Add player rows
+    # Add player rows (empty cell in column A to maintain alignment)
     for player in sorted_roster:
         source_text = player.source.name.replace('_', ' ')
         values.append([
+            "",  # Empty cell in column A
             player.name,
             player.position,
             player.roster_position or "",
@@ -495,11 +533,11 @@ def _create_team_sheet_data(team: Team) -> List[List[Any]]:
             source_text
         ])
 
-    # Add summary rows
-    values.append([])
-    values.append(["TOTAL SALARY", "", "", team.total_salary, ""])
-    values.append(["REMAINING SALARY", "", "", team.get_remaining_salary(), ""])
-    values.append(["FAAB REMAINING", "", "", team.faab_remaining, ""])
+    # Add summary rows (empty cell in column A to maintain alignment)
+    values.append([""])  # Blank row
+    values.append(["", "TOTAL SALARY", "", "", team.total_salary, ""])
+    values.append(["", "REMAINING SALARY", "", "", team.get_remaining_salary(), ""])
+    values.append(["", "FAAB REMAINING", "", "", team.faab_remaining, ""])
 
     return values
 
@@ -514,7 +552,8 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
 
     Returns:
         List[dict]: List of formatting requests for batchUpdate, including:
-            - Title formatting (row 1)
+            - Team_id metadata cell invisible formatting (A1)
+            - Title formatting (row 1, column B)
             - Header row formatting (row 3)
             - Salary column currency formatting
             - Summary rows formatting
@@ -525,13 +564,17 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
     summary_row = num_players + 4  # Header + blank + table header + players + blank
 
     format_requests = [
-        # Format title (row 1)
+        # Format team_id metadata cell (A1) - make it invisible
+        _get_team_id_cell_formatting(sheet_id),
+
+        # Format title (row 1, column B onwards)
         {
             'repeatCell': {
                 'range': {
                     'sheetId': sheet_id,
                     'startRowIndex': 0,
-                    'endRowIndex': 1
+                    'endRowIndex': 1,
+                    'startColumnIndex': 1  # Start from column B (skip A which has team_id)
                 },
                 'cell': {
                     'userEnteredFormat': {
@@ -576,15 +619,15 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
                 'fields': 'userEnteredFormat(textFormat,backgroundColor)'
             }
         },
-        # Format salary column as currency
+        # Format salary column as currency (column E, index 4)
         {
             'repeatCell': {
                 'range': {
                     'sheetId': sheet_id,
                     'startRowIndex': 3,
                     'endRowIndex': 3 + num_players,
-                    'startColumnIndex': 3,
-                    'endColumnIndex': 4
+                    'startColumnIndex': 4,  # Column E (was D before adding team_id column)
+                    'endColumnIndex': 5
                 },
                 'cell': {
                     'userEnteredFormat': {
@@ -620,15 +663,15 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
                 'fields': 'userEnteredFormat(textFormat,backgroundColor)'
             }
         },
-        # Format summary salary values as currency
+        # Format summary salary values as currency (column E, index 4)
         {
             'repeatCell': {
                 'range': {
                     'sheetId': sheet_id,
                     'startRowIndex': summary_row,
                     'endRowIndex': summary_row + 3,
-                    'startColumnIndex': 3,
-                    'endColumnIndex': 4
+                    'startColumnIndex': 4,  # Column E (was D before adding team_id column)
+                    'endColumnIndex': 5
                 },
                 'cell': {
                     'userEnteredFormat': {
@@ -641,14 +684,14 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
                 'fields': 'userEnteredFormat(numberFormat)'
             }
         },
-        # Auto-resize columns
+        # Auto-resize columns (now includes column A for team_id)
         {
             'autoResizeDimensions': {
                 'dimensions': {
                     'sheetId': sheet_id,
                     'dimension': 'COLUMNS',
                     'startIndex': 0,
-                    'endIndex': 5
+                    'endIndex': 6  # Now 6 columns (A-F) instead of 5
                 }
             }
         },
@@ -672,8 +715,8 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
                         'sheetId': sheet_id,
                         'startRowIndex': summary_row + 1,  # REMAINING SALARY row
                         'endRowIndex': summary_row + 2,
-                        'startColumnIndex': 3,  # Column D (value column)
-                        'endColumnIndex': 4
+                        'startColumnIndex': 4,  # Column E (value column, was D before team_id)
+                        'endColumnIndex': 5
                     }],
                     'booleanRule': {
                         'condition': {
@@ -700,8 +743,8 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
                         'sheetId': sheet_id,
                         'startRowIndex': summary_row + 1,  # REMAINING SALARY row
                         'endRowIndex': summary_row + 2,
-                        'startColumnIndex': 3,  # Column D (value column)
-                        'endColumnIndex': 4
+                        'startColumnIndex': 4,  # Column E (value column, was D before team_id)
+                        'endColumnIndex': 5
                     }],
                     'booleanRule': {
                         'condition': {

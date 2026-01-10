@@ -15,6 +15,8 @@ A Python application that extracts fantasy basketball league data from Yahoo Fan
   - Only updates teams with roster changes (75-100% efficiency)
   - Tracks transactions since last update
   - Preserves all formatting and structure
+  - Automatic team rename handling (v2.3)
+  - Orphaned sheet cleanup (v2.3)
   - Force full update option available
 - 🔐 **OAuth 2.0 Authentication** - Secure authentication with both Yahoo and Google APIs
 - 🔄 **Automatic Token Refresh** - Tokens refresh automatically, no repeated authentication needed
@@ -36,8 +38,9 @@ A Python application that extracts fantasy basketball league data from Yahoo Fan
    - Free agents ($0)
 3. **Generates Google Sheets** - Creates a professionally formatted spreadsheet with:
    - A summary sheet showing league-wide statistics
-   - Individual sheets for each team's roster
+   - Individual sheets for each team's roster (tracked by team ID, not name)
    - Complete player details including salary and acquisition source
+   - Automatic handling of team renames (sheets update to match current names)
 
 ## Quick Start
 
@@ -364,13 +367,18 @@ uv run python -m src.auth.google_auth_manual
 
 ---
 
-**Status**: ✅ Production-ready with Discord notifications (v2.1)
+**Status**: ✅ Production-ready with automatic team rename handling (v2.3)
 
 **Recent Updates:**
-- Added Discord webhook integration for automated notifications
-- Rich embedded notifications with update summaries and error alerts
-- Optional role mentions for critical errors
-- Zero cost, minimal setup required
-- Seamless GitHub Actions integration
+- **v2.3** - Automatic team rename handling and orphaned sheet cleanup
+  - Sheet renaming when teams change names in Yahoo Fantasy
+  - Automatic deletion of orphaned sheets from renamed/removed teams
+  - ID-based sheet tracking (invisible metadata in column A)
+  - Backwards compatible with existing spreadsheets (auto-migration)
+- **v2.2** - Discord webhook integration for automated notifications
+  - Rich embedded notifications with update summaries and error alerts
+  - Optional role mentions for critical errors
+- **v2.0** - Incremental update mode with transaction tracking
+  - 75-100% efficiency by only updating changed teams
 
 For detailed technical documentation, see [CLAUDE.md](CLAUDE.md).

@@ -222,10 +222,53 @@ When using `--verbose`, shows detailed transaction information:
 **Edge Cases Handled:**
 - Invalid spreadsheet IDs: Returns None, treated as first run
 - No transactions: Updates only summary sheet
-- Team name changes: Creates new sheet, old sheet remains
+- Team name changes: Automatically renames sheet, removes orphaned sheets (v2.3)
 - New teams: Automatically creates sheet for new team
-- Removed teams: Old sheets remain (no deletion)
+- Removed teams: Orphaned sheets automatically deleted (v2.3)
 - Backwards compatibility: Works with old spreadsheets without timestamps
+
+### Automatic Team Rename Handling (v2.3)
+
+The application now intelligently handles team renames and prevents duplicate sheets.
+
+**How It Works:**
+1. **ID-Based Sheet Tracking**: Each team sheet stores an invisible team_id in cell A1
+   - Format: `TEAM_ID:{team_id}` (e.g., "TEAM_ID:1")
+   - Invisible to users (white text on white background)
+   - Enables reliable team identification even when names change
+
+2. **Automatic Sheet Renaming**: When teams are renamed in Yahoo Fantasy:
+   - Detects the rename by comparing sheet title with current Yahoo team name
+   - Automatically updates the sheet title to match the new name
+   - Preserves all data and formatting
+
+3. **Orphaned Sheet Cleanup**: Removes old sheets from renamed/removed teams:
+   - Identifies sheets with team_ids not in current league
+   - Automatically deletes orphaned sheets during updates
+   - User-friendly summary shows what was deleted
+
+4. **Backwards Compatibility**: Works seamlessly with old spreadsheets:
+   - First update automatically migrates old sheets (adds invisible team_id)
+   - No manual intervention required
+   - All existing data preserved
+
+**What You'll See:**
+```
+Step 2c.5: Checking for orphaned sheets...
+→ Found 2 orphaned sheet(s) from renamed/removed teams:
+  • Old Team Name (team_id=3)
+  • Another Old Name (team_id=7)
+  Deleting orphaned sheets...
+✓ Deleted 2 orphaned sheet(s)
+```
+
+**Technical Details:**
+- **Column Layout Change**: Team sheets now have an extra column A with invisible metadata
+- **Data Location**: All visible data shifted one column right (now in columns B-F instead of A-E)
+- **Sheet Lookup**: Primary lookup by team_id, fallback to name-based for compatibility
+- **Performance**: Efficient batch operations minimize API calls
+
+**Note:** The team_id metadata in column A is system-managed. Do not manually edit this column.
 
 ### Discord Notifications (v2.2)
 

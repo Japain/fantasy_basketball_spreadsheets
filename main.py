@@ -343,6 +343,24 @@ def main():
                 transactions = []
             print()
 
+            # Step 2c.5: Cleanup orphaned sheets
+            print("Step 2c.5: Checking for orphaned sheets...")
+            current_team_ids = {team.team_id for team in league_data.teams}
+            current_team_names = {team.team_name for team in league_data.teams}
+
+            try:
+                from src.sheet_updater import cleanup_orphaned_sheets
+                deleted_count = cleanup_orphaned_sheets(service, spreadsheet_id, current_team_ids, current_team_names)
+                if deleted_count > 0:
+                    print(f"✓ Deleted {deleted_count} orphaned sheet(s)")
+                else:
+                    print("✓ No orphaned sheets found")
+            except Exception as e:
+                logger.error(f"Failed to cleanup orphaned sheets: {e}")
+                print(f"⚠ Warning: Orphan cleanup failed: {e}")
+                # Continue anyway - not critical
+            print()
+
             # Step 2d: Identify affected teams
             print("Step 2d: Identifying teams to update...")
             if args.force_full_update or not last_run_timestamp:
