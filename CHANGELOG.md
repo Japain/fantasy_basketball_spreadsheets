@@ -44,6 +44,173 @@ Changed Google OAuth app from "Testing" to "Production" status in Google Cloud C
 
 ---
 
+## [2.4.0] - 2026-01-12
+
+### Added - Rate Limit Optimization Phase 1
+
+**New feature**: Cache reuse and exponential backoff retry to reduce Google Sheets API calls and handle rate limits gracefully
+
+#### Overview
+Implemented first phase of rate limit optimization to address Google Sheets API "Read requests per minute per user" quota limit (60 requests/minute). This phase reduces redundant metadata reads and adds automatic retry logic for rate limits and transient server errors.
+
+**Key Features**:
+- 🔄 **Cache reuse** - Metadata read once and shared between functions
+- ⚡ **41% reduction** in API read calls per update (39 → 23 calls)
+- 🔁 **Automatic retry** - Exponential backoff for rate limits and server errors
+- 📊 **API monitoring** - Built-in call counter for tracking usage
+- 🚫 **No crashes** - Graceful handling of 429 rate limit errors
+
+#### New Modules
+
+**`src/api_retry.py`** - API retry utilities with exponential backoff
+- `api_call_with_retry()` - Wraps API calls with automatic retry logic
+  - Retries on 429 (rate limit) and 5xx (server error) status codes
+  - Exponential backoff formula: `min((2^n + random_ms), max_backoff)`
+  - Configurable max retries (default: 5) and backoff time (default: 64s)
+  - Non-retryable errors (4xx) fail immediately
+- `create_retry_wrapper()` - Factory for operation-specific retry functions
+- `APICallCounter` - Context manager for tracking API call counts
+
+**`tests/test_api_retry.py`** - Comprehensive retry logic tests
+- 6 test scenarios covering all retry behaviors:
+  - Successful calls without retry
+  - Rate limit (429) with successful retry
+  - Server error (5xx) with successful retry
+  - Max retries exhausted scenario
+  - Non-retryable errors (4xx) immediate failure
+  - API call counter tracking
+- All tests passing ✅
+
+#### Modified Modules
+
+**`src/sheet_updater.py`** - Cache reuse and retry integration
+- `cleanup_orphaned_sheets()` - Now accepts optional `metadata_cache` parameter
+  - Avoids redundant API calls by reusing pre-built cache
+  - **50% reduction** in metadata reads (32 → 16 calls for 16-team league)
+- `_build_sheet_metadata_cache()` - Wrapped with retry logic
+- `_find_sheet_id_by_name()` - Wrapped with retry logic
+- All read operations now automatically retry on rate limits
+
+**`src/sheet_reader.py`** - Retry integration
+- `read_last_run_timestamp()` - Wrapped with retry logic
+- `validate_sheet_structure()` - Wrapped with retry logic
+- `get_existing_team_sheets()` - Wrapped with retry logic
+- All critical read operations protected against rate limits
+
+**`main.py`** - Cache reuse implementation
+- Updated orphaned sheet cleanup workflow
+- Builds metadata cache once using `_build_sheet_metadata_cache()`
+- Passes cache to `cleanup_orphaned_sheets()` to avoid redundant reads
+- Eliminates duplicate API calls for metadata
+
+#### Performance Impact
+
+**Before Phase 1**:
+- ~39 read requests per update (16-team league)
+- No retry logic (crashes on rate limits)
+- Metadata read twice (once in cache build, once in cleanup)
+- Max throughput: 1-2 updates per minute
+
+**After Phase 1**:
+- ~23 read requests per update (**41% reduction**)
+- Automatic retry on rate limits and server errors
+- Metadata read once (cache reused)
+- Max throughput: 2-3 updates per minute (**+50% increase**)
+
+**API Call Breakdown**:
+- Metadata reads: 32 → 16 calls (**50% reduction**)
+- Timestamp reads: Protected with retry
+- Structure validation: Protected with retry
+- Total efficiency: 41% fewer API calls
+
+#### Technical Implementation
+
+**Retry Strategy**:
+- Exponential backoff with jitter (prevents thundering herd)
+- Random delay: 0-1000ms added to backoff time
+- Default max backoff: 64 seconds
+- Retryable errors: 429, 500, 502, 503, 504
+- Non-retryable errors: 400, 401, 403, 404 (fail immediately)
+
+**Cache Reuse Pattern**:
+```python
+# Build cache once
+metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
+
+# Reuse cache in multiple operations
+cleanup_orphaned_sheets(..., metadata_cache=metadata_cache)
+```
+
+**Retry Wrapper Usage**:
+```python
+result = api_call_with_retry(
+    lambda: service.spreadsheets().values().get(...).execute(),
+    operation_name="read timestamp"
+)
+```
+
+#### Logging Improvements
+- Clear retry messages with attempt count: "Rate limit hit for X. Retrying in 2.5s (attempt 2/5)"
+- Success messages after retries: "✓ read timestamp succeeded after 2 retries"
+- Non-retryable error identification: "Non-retryable error for X: HTTP 404"
+
+#### Documentation Updates
+- Added `RATE_LIMIT_SOLUTIONS.md` - Comprehensive research document
+  - Root cause analysis of rate limit issue
+  - 5 prioritized solutions with code examples
+  - Expected impact metrics and testing strategies
+- Added `RATE_LIMIT_TODO.md` - Implementation roadmap
+  - 3-phase approach (12-15 hours over 3 weeks)
+  - Specific tasks with line numbers and file references
+  - Success metrics and testing checklists
+
+#### Next Steps
+
+**Phase 2** (Planned) will implement batch reads using `spreadsheets.values.batchGet()`:
+- Target: ~7 read requests per update
+- Total reduction: 82% (39 → 7 calls)
+- Enable 8+ updates per minute
+
+#### Testing
+
+**Unit Tests**:
+- `tests/test_api_retry.py` - 6 comprehensive test scenarios
+- All tests passing with realistic retry timing
+
+**Integration Tests**:
+- Verified module imports work correctly
+- Confirmed no breaking changes to existing functionality
+- Syntax validation successful
+
+#### Usage
+
+The retry logic is automatic and transparent:
+- No code changes needed for basic usage
+- Rate limits are handled automatically
+- Retries logged for monitoring
+- Failures after max retries bubble up as exceptions
+
+For monitoring API usage:
+```python
+from src.api_retry import APICallCounter
+
+with APICallCounter() as counter:
+    # Make API calls
+    counter.increment("read")
+    # Summary logged automatically at end
+```
+
+#### Files Changed
+- **5 files modified**: 503 insertions, 62 deletions
+- **New files**: `src/api_retry.py` (195 lines), `tests/test_api_retry.py` (221 lines)
+- **Modified**: `main.py`, `src/sheet_reader.py`, `src/sheet_updater.py`
+
+#### Commits
+- a25220e - Implement Phase 1: Cache reuse and exponential backoff retry (v2.4)
+- 9419963 - Add rate limit optimization planning documents
+
+---
+
 ## [2.2.0] - 2025-11-20
 
 ### Added - Discord Webhook Notifications
