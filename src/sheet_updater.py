@@ -17,6 +17,7 @@ from googleapiclient.errors import HttpError
 from src.logger import get_logger
 from src.data_models import League, Team
 from src.google_auth import get_google_sheets_service
+from src.api_retry import api_call_with_retry
 from src.sheet_generator import (
     _create_team_sheet_data,
     _create_team_sheet_formatting,
@@ -49,10 +50,13 @@ def _find_sheet_id_by_name(service: Any, spreadsheet_id: str, sheet_name: str) -
         SheetUpdateError: If API call fails.
     """
     try:
-        # Get spreadsheet metadata
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        # Get spreadsheet metadata with retry logic
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name=f"find sheet by name '{sheet_name}'"
+        )
 
         # Search for sheet by name
         sheets = spreadsheet.get('sheets', [])
@@ -92,10 +96,13 @@ def _build_sheet_metadata_cache(service: Any, spreadsheet_id: str) -> dict:
         SheetUpdateError: If API call fails.
     """
     try:
-        # Get all sheets in the spreadsheet
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        # Get all sheets in the spreadsheet with retry logic
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name="build sheet metadata cache"
+        )
 
         sheets = spreadsheet.get('sheets', [])
         metadata_cache = {}
@@ -109,12 +116,15 @@ def _build_sheet_metadata_cache(service: Any, spreadsheet_id: str) -> dict:
             if sheet_title == 'Summary':
                 continue
 
-            # Read cell A1 to get team_id metadata
+            # Read cell A1 to get team_id metadata with retry logic
             try:
-                result = service.spreadsheets().values().get(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"'{sheet_title}'!A1"
-                ).execute()
+                result = api_call_with_retry(
+                    lambda: service.spreadsheets().values().get(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"'{sheet_title}'!A1"
+                    ).execute(),
+                    operation_name=f"read metadata from '{sheet_title}'"
+                )
 
                 values = result.get('values', [])
                 if values and values[0]:
@@ -325,7 +335,7 @@ def _migrate_sheet_to_id_based(service: Any, spreadsheet_id: str, sheet_id: int,
         raise SheetUpdateError(error_msg) from e
 
 
-def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids: set, current_team_names: set) -> int:
+def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids: set, current_team_names: set, metadata_cache: dict = None) -> int:
     """
     Identify and delete sheets for teams that no longer exist in the league.
 
@@ -342,6 +352,9 @@ def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids:
         spreadsheet_id: The spreadsheet ID.
         current_team_ids: Set of team IDs currently in the league.
         current_team_names: Set of team names currently in the league.
+        metadata_cache: Optional pre-built metadata cache from _build_sheet_metadata_cache().
+                       If provided, avoids redundant API calls to read cell A1 data.
+                       If None, will build cache internally.
 
     Returns:
         int: Number of sheets deleted.
@@ -350,18 +363,32 @@ def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids:
         SheetUpdateError: If cleanup fails (non-critical - logged but doesn't stop update).
     """
     try:
-        # Get all sheets in the spreadsheet
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        # Use provided metadata cache or build it if not provided
+        if metadata_cache is None:
+            logger.debug("No metadata cache provided, building cache...")
+            metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
+        else:
+            logger.debug("Using provided metadata cache (avoiding redundant API calls)")
+
+        # Get all sheets in the spreadsheet with retry logic
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name="cleanup orphaned sheets"
+        )
         sheets = spreadsheet.get('sheets', [])
 
-        # Build sets of sheets with/without metadata
-        sheets_with_metadata = {}  # team_id -> (sheet_id, sheet_title)
+        # Build sets of sheets with/without metadata using the cache
+        sheets_with_metadata = metadata_cache.copy()  # team_id -> (sheet_id, sheet_title)
         sheets_without_metadata = []  # [(sheet_id, sheet_title)]
         sheets_by_name = {}  # sheet_title -> (sheet_id, has_metadata)
 
-        # Categorize all sheets
+        # Build reverse lookup and identify sheets without metadata
+        for team_id, (sheet_id, sheet_title) in sheets_with_metadata.items():
+            sheets_by_name[sheet_title] = (sheet_id, True)
+
+        # Identify sheets that are NOT in the metadata cache (old format or no team_id)
         for sheet in sheets:
             properties = sheet.get('properties', {})
             sheet_id = properties.get('sheetId')
@@ -371,32 +398,11 @@ def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids:
             if sheet_title == 'Summary':
                 continue
 
-            # Read cell A1 to check for metadata
-            try:
-                result = service.spreadsheets().values().get(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"'{sheet_title}'!A1"
-                ).execute()
-
-                values = result.get('values', [])
-                cell_value = str(values[0][0]) if values and values[0] else ""
-
-                if cell_value.startswith('TEAM_ID:'):
-                    # Sheet has metadata
-                    team_id = cell_value.split(':', 1)[1].strip()
-                    sheets_with_metadata[team_id] = (sheet_id, sheet_title)
-                    sheets_by_name[sheet_title] = (sheet_id, True)
-                    logger.debug(f"Found sheet with metadata: '{sheet_title}' (team_id={team_id})")
-                else:
-                    # Old sheet without metadata
-                    sheets_without_metadata.append((sheet_id, sheet_title))
-                    sheets_by_name[sheet_title] = (sheet_id, False)
-                    logger.debug(f"Found sheet without metadata: '{sheet_title}'")
-
-            except Exception as e:
-                # Non-critical error reading sheet
-                logger.warning(f"Could not check sheet '{sheet_title}': {e}")
-                continue
+            # If sheet is not in metadata cache, it's an old-format sheet
+            if sheet_title not in sheets_by_name:
+                sheets_without_metadata.append((sheet_id, sheet_title))
+                sheets_by_name[sheet_title] = (sheet_id, False)
+                logger.debug(f"Found sheet without metadata: '{sheet_title}'")
 
         orphaned_sheets = []
 

@@ -349,8 +349,17 @@ def main():
             current_team_names = {team.team_name for team in league_data.teams}
 
             try:
-                from src.sheet_updater import cleanup_orphaned_sheets
-                deleted_count = cleanup_orphaned_sheets(service, spreadsheet_id, current_team_ids, current_team_names)
+                from src.sheet_updater import cleanup_orphaned_sheets, _build_sheet_metadata_cache
+
+                # Build metadata cache once to avoid redundant API calls
+                # This cache will be used by cleanup_orphaned_sheets to identify sheets
+                # without making individual API calls for each sheet
+                metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
+
+                deleted_count = cleanup_orphaned_sheets(
+                    service, spreadsheet_id, current_team_ids, current_team_names,
+                    metadata_cache=metadata_cache
+                )
                 if deleted_count > 0:
                     print(f"✓ Deleted {deleted_count} orphaned sheet(s)")
                 else:

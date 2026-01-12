@@ -11,6 +11,7 @@ from googleapiclient.errors import HttpError
 
 from src.logger import get_logger
 from src.google_auth import get_google_sheets_service
+from src.api_retry import api_call_with_retry
 
 logger = get_logger(__name__)
 
@@ -148,11 +149,14 @@ def read_last_run_timestamp(service: Any, spreadsheet_id: str) -> Optional[datet
     logger.info(f"Reading timestamp from spreadsheet {spreadsheet_id}...")
 
     try:
-        # Try to read cell G1 from Summary sheet
-        result = service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range='Summary!G1'
-        ).execute()
+        # Try to read cell G1 from Summary sheet with retry logic
+        result = api_call_with_retry(
+            lambda: service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range='Summary!G1'
+            ).execute(),
+            operation_name="read timestamp"
+        )
 
         # Case 1: No values returned (cell doesn't exist or is empty)
         if 'values' not in result or not result['values']:
@@ -208,10 +212,13 @@ def validate_sheet_structure(service: Any, spreadsheet_id: str) -> bool:
     logger.info(f"Validating spreadsheet structure for {spreadsheet_id}...")
 
     try:
-        # Get spreadsheet metadata
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        # Get spreadsheet metadata with retry logic
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name="validate sheet structure"
+        )
 
         # Get all sheet names
         sheets = spreadsheet.get('sheets', [])
@@ -257,10 +264,13 @@ def get_existing_team_sheets(service: Any, spreadsheet_id: str) -> List[str]:
     logger.info(f"Getting existing team sheets from {spreadsheet_id}...")
 
     try:
-        # Get spreadsheet metadata
-        spreadsheet = service.spreadsheets().get(
-            spreadsheetId=spreadsheet_id
-        ).execute()
+        # Get spreadsheet metadata with retry logic
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name="get existing team sheets"
+        )
 
         # Get all sheet names
         sheets = spreadsheet.get('sheets', [])
