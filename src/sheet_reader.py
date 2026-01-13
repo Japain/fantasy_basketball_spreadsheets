@@ -248,11 +248,130 @@ def validate_sheet_structure(service: Any, spreadsheet_id: str) -> bool:
         return False
 
 
+def batch_read_initial_data(service: Any, spreadsheet_id: str) -> dict:
+    """
+    Batch read initial spreadsheet data in optimized way (v2.5+).
+
+    Combines multiple operations into minimal API calls:
+    - Gets spreadsheet metadata (sheet list, properties)
+    - Reads timestamp from Summary!G1
+
+    This replaces making separate calls to:
+    - read_last_run_timestamp() (1 API call)
+    - validate_sheet_structure() (1 API call)
+    - get_existing_team_sheets() (1 API call)
+
+    Args:
+        service: Google Sheets API service object
+        spreadsheet_id: Spreadsheet ID
+
+    Returns:
+        dict with keys:
+            - 'timestamp': datetime object or None
+            - 'has_summary': bool (True if Summary sheet exists)
+            - 'sheet_count': int (total number of sheets)
+            - 'team_sheets': List[str] (team sheet names, excludes Summary)
+            - 'valid_structure': bool (True if structure is valid)
+
+    Performance:
+        - Before (v2.4): 3 API calls (timestamp + validation + team sheets)
+        - After (v2.5): 2 API calls (1 metadata + 1 value read)
+        - Reduction: 33% fewer calls
+
+    Example:
+        >>> data = batch_read_initial_data(service, spreadsheet_id)
+        >>> if data['valid_structure']:
+        >>>     timestamp = data['timestamp']
+        >>>     team_sheets = data['team_sheets']
+    """
+    logger.info(f"Batch reading initial data from {spreadsheet_id}...")
+
+    result = {
+        'timestamp': None,
+        'has_summary': False,
+        'sheet_count': 0,
+        'team_sheets': [],
+        'valid_structure': False
+    }
+
+    try:
+        # CALL 1: Get spreadsheet metadata (sheet list, properties)
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name="batch read spreadsheet metadata"
+        )
+
+        # Process sheet metadata
+        sheets = spreadsheet.get('sheets', [])
+        sheet_names = [sheet['properties']['title'] for sheet in sheets]
+        result['sheet_count'] = len(sheet_names)
+        result['has_summary'] = 'Summary' in sheet_names
+        result['team_sheets'] = [name for name in sheet_names if name != 'Summary']
+
+        # Validate structure
+        result['valid_structure'] = result['has_summary'] and len(sheet_names) >= 2
+
+        logger.debug(
+            f"Metadata read: {result['sheet_count']} sheets, "
+            f"Summary={'Yes' if result['has_summary'] else 'No'}, "
+            f"Team sheets={len(result['team_sheets'])}"
+        )
+
+        # CALL 2: Read timestamp from Summary!G1 (only if Summary exists)
+        if result['has_summary']:
+            try:
+                timestamp_result = api_call_with_retry(
+                    lambda: service.spreadsheets().values().get(
+                        spreadsheetId=spreadsheet_id,
+                        range='Summary!G1'
+                    ).execute(),
+                    operation_name="batch read timestamp"
+                )
+
+                # Parse timestamp if found
+                if 'values' in timestamp_result and timestamp_result['values']:
+                    timestamp_str = timestamp_result['values'][0][0] if timestamp_result['values'][0] else None
+                    if timestamp_str and str(timestamp_str).strip():
+                        result['timestamp'] = _parse_iso_timestamp(str(timestamp_str).strip())
+                        if result['timestamp']:
+                            logger.info(f"✓ Found timestamp: {timestamp_str}")
+                        else:
+                            logger.warning(f"Invalid timestamp format: '{timestamp_str}'")
+                    else:
+                        logger.info("Timestamp cell G1 is empty (old format)")
+                else:
+                    logger.info("No timestamp found in G1 (old format)")
+
+            except HttpError as e:
+                logger.warning(f"Could not read timestamp: {e}")
+                # Non-critical - continue with None timestamp
+
+        logger.info(
+            f"✓ Batch read complete: {result['sheet_count']} sheets, "
+            f"valid={'Yes' if result['valid_structure'] else 'No'}, "
+            f"timestamp={'Found' if result['timestamp'] else 'None'}"
+        )
+        return result
+
+    except HttpError as e:
+        logger.error(f"HTTP error in batch read: {e}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Error in batch read: {e}")
+        return result
+
+
 def get_existing_team_sheets(service: Any, spreadsheet_id: str) -> List[str]:
     """
     Get list of existing team sheet names from the spreadsheet.
 
     Excludes the Summary sheet.
+
+    ⚠️ NOTE: Consider using batch_read_initial_data() instead for better performance
+    if you also need timestamp or validation data (reduces API calls).
 
     Args:
         service: Google Sheets API service object

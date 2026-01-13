@@ -14,7 +14,7 @@ from config import Config
 from src.logger import get_logger
 from src.yahoo_data_fetcher import YahooDataFetcher
 from src.sheet_generator import generate_league_report
-from src.sheet_reader import extract_spreadsheet_id_from_url, read_last_run_timestamp, validate_sheet_structure
+from src.sheet_reader import extract_spreadsheet_id_from_url, read_last_run_timestamp, validate_sheet_structure, batch_read_initial_data
 from src.sheet_updater import update_team_sheet, update_summary_sheet
 from src.transaction_tracker import get_transactions_since, get_affected_team_ids
 from src.google_auth import get_google_sheets_service
@@ -300,9 +300,12 @@ def main():
         try:
             service = get_google_sheets_service()
 
-            # Step 2a: Validate sheet structure
-            print("Step 2a: Validating spreadsheet structure...")
-            if not validate_sheet_structure(service, spreadsheet_id):
+            # Step 2a-2b: Batch read initial data (validation + timestamp)
+            print("Step 2a-2b: Reading spreadsheet metadata and timestamp...")
+            initial_data = batch_read_initial_data(service, spreadsheet_id)
+
+            # Validate structure
+            if not initial_data['valid_structure']:
                 print("✗ Warning: Spreadsheet structure doesn't match expected format")
                 print("  This may not be a spreadsheet created by this application.")
                 response = input("Continue anyway? (y/N): ")
@@ -310,12 +313,10 @@ def main():
                     print("Update cancelled.")
                     return 0
 
-            print("✓ Spreadsheet structure validated")
-            print()
+            print(f"✓ Spreadsheet validated: {initial_data['sheet_count']} sheets found")
 
-            # Step 2b: Read last run timestamp
-            print("Step 2b: Reading last update timestamp...")
-            last_run_timestamp = read_last_run_timestamp(service, spreadsheet_id)
+            # Extract timestamp
+            last_run_timestamp = initial_data['timestamp']
 
             if last_run_timestamp:
                 time_ago = format_time_ago(last_run_timestamp)

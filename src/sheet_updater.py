@@ -78,10 +78,11 @@ def _find_sheet_id_by_name(service: Any, spreadsheet_id: str, sheet_name: str) -
 
 def _build_sheet_metadata_cache(service: Any, spreadsheet_id: str) -> dict:
     """
-    Build a cache of team_id to (sheet_id, sheet_title) mappings.
+    Build a cache of team_id to (sheet_id, sheet_title) mappings using batch read.
 
-    Reads cell A1 from each sheet to extract team_id metadata. This allows
-    efficient ID-based sheet lookups and is used to identify orphaned sheets.
+    Uses values().batchGet() to read all A1 cells in a SINGLE API call instead of
+    reading each sheet individually. This is critical for staying within Google's
+    60 reads/minute quota limit.
 
     Args:
         service: Google Sheets API service object.
@@ -91,6 +92,103 @@ def _build_sheet_metadata_cache(service: Any, spreadsheet_id: str) -> dict:
         dict: Mapping of team_id (str) to tuple of (sheet_id, sheet_title).
               Example: {"1": (123456, "Team Name"), "2": (789012, "Another Team")}
               Sheets without valid team_id metadata are excluded.
+
+    Raises:
+        SheetUpdateError: If API call fails.
+
+    Performance:
+        - Before (v2.4): 1 + N API calls (1 for sheet list, N for individual reads)
+        - After (v2.5): 1 + 1 API calls (1 for sheet list, 1 batch read)
+        - For 16 teams: 17 → 2 API calls (88% reduction)
+    """
+    try:
+        # Get all sheets in the spreadsheet with retry logic
+        spreadsheet = api_call_with_retry(
+            lambda: service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id
+            ).execute(),
+            operation_name="build sheet metadata cache"
+        )
+
+        sheets = spreadsheet.get('sheets', [])
+
+        # Build list of ranges to batch read and track sheet info
+        ranges = []
+        sheet_info = []  # List of (sheet_id, sheet_title) tuples
+
+        for sheet in sheets:
+            properties = sheet.get('properties', {})
+            sheet_id = properties.get('sheetId')
+            sheet_title = properties.get('title')
+
+            # Skip Summary sheet
+            if sheet_title == 'Summary':
+                continue
+
+            ranges.append(f"'{sheet_title}'!A1")
+            sheet_info.append((sheet_id, sheet_title))
+
+        # Handle empty case (no team sheets)
+        if not ranges:
+            logger.debug("No team sheets found (only Summary sheet)")
+            return {}
+
+        # Batch read all A1 cells in a SINGLE API call
+        logger.debug(f"Batch reading {len(ranges)} sheet(s) metadata in 1 API call")
+        result = api_call_with_retry(
+            lambda: service.spreadsheets().values().batchGet(
+                spreadsheetId=spreadsheet_id,
+                ranges=ranges
+            ).execute(),
+            operation_name="batch read sheet metadata"
+        )
+
+        # Process batch results
+        metadata_cache = {}
+        value_ranges = result.get('valueRanges', [])
+
+        for i, value_range in enumerate(value_ranges):
+            sheet_id, sheet_title = sheet_info[i]
+            values = value_range.get('values', [])
+
+            if values and values[0]:
+                cell_value = str(values[0][0])
+
+                # Check if cell contains team_id metadata
+                if cell_value.startswith('TEAM_ID:'):
+                    team_id = cell_value.split(':', 1)[1].strip()
+                    metadata_cache[team_id] = (sheet_id, sheet_title)
+                    logger.debug(f"Cached metadata: team_id={team_id}, sheet='{sheet_title}' (ID: {sheet_id})")
+                else:
+                    logger.debug(f"Sheet '{sheet_title}' has no team_id metadata in A1")
+            else:
+                logger.debug(f"Sheet '{sheet_title}' has empty cell A1")
+
+        logger.debug(f"Built metadata cache with {len(metadata_cache)} entries using batch read")
+        return metadata_cache
+
+    except HttpError as e:
+        error_msg = f"Failed to build sheet metadata cache: {e}"
+        logger.error(error_msg)
+        raise SheetUpdateError(error_msg) from e
+
+
+def _build_sheet_metadata_cache_legacy(service: Any, spreadsheet_id: str) -> dict:
+    """
+    LEGACY: Build metadata cache using individual reads (kept for rollback).
+
+    This is the original implementation that reads each sheet's A1 cell individually.
+    Kept for backwards compatibility and rollback if batch read causes issues.
+
+    ⚠️ WARNING: Makes N+1 API calls (1 for sheet list + N individual reads).
+    Use _build_sheet_metadata_cache() instead for production.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+
+    Returns:
+        dict: Mapping of team_id (str) to tuple of (sheet_id, sheet_title).
 
     Raises:
         SheetUpdateError: If API call fails.
@@ -145,7 +243,7 @@ def _build_sheet_metadata_cache(service: Any, spreadsheet_id: str) -> dict:
                 logger.warning(f"Could not read metadata from sheet '{sheet_title}': {e}")
                 continue
 
-        logger.debug(f"Built metadata cache with {len(metadata_cache)} entries")
+        logger.debug(f"Built metadata cache with {len(metadata_cache)} entries (legacy mode)")
         return metadata_cache
 
     except HttpError as e:
