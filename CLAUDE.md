@@ -26,6 +26,7 @@ Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library)
 - Optional environment variables:
   - `DISCORD_WEBHOOK_URL`: Discord webhook URL for notifications (optional, leave blank to disable)
   - `DISCORD_ALERT_ROLE_ID`: Discord role ID for error mentions (optional)
+  - `OWNER_EMAIL`: Email address for sheet protection - only this user can edit sheets (optional, e.g., "user@gmail.com")
 - `credentials/` directory contains:
   - Google OAuth credentials JSON file
   - `google_token.pickle`: Saved Google authentication token (auto-generated)
@@ -300,6 +301,33 @@ The application includes optional Discord webhook integration for automated noti
 - Discord failures never break the main workflow
 - Notifications are completely optional
 - Leave webhook URL blank to disable
+
+### Sheet Protection
+
+The application can automatically protect all sheets (except Draft Picks) to prevent accidental edits.
+
+**How It Works:**
+- **Protected Sheets**: Summary sheet and all team sheets are protected
+- **Editable Sheet**: Draft Picks sheet remains unprotected for manual data entry
+- **Owner-Only Access**: Only the configured owner email can edit protected sheets
+- **Automatic Application**: Protection is applied during sheet creation and updates
+
+**Configuration:**
+1. Add `OWNER_EMAIL` to `.env` file with your Google account email
+   ```
+   OWNER_EMAIL=youremail@gmail.com
+   ```
+2. Protection is automatically applied when creating or updating sheets
+3. If `OWNER_EMAIL` is not set, sheets remain unprotected (legacy behavior)
+
+**Features:**
+- ✅ **Summary sheet protected** - Prevents accidental changes to league statistics
+- ✅ **Team sheets protected** - Prevents unauthorized roster modifications
+- ✅ **Draft Picks unprotected** - Allows collaborative manual data entry
+- ✅ **Automatic updates** - Protection reapplied during every update
+- ✅ **Backwards compatible** - Works with existing spreadsheets
+
+**Note:** The owner email must match the Google account that has access to the spreadsheet. Other users with view access will see a lock icon and cannot edit protected sheets.
 
 ### Rate Limit Optimization (v2.4 + v2.5) ✅ Production Ready
 

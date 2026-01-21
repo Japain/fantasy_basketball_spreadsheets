@@ -11,6 +11,7 @@ from googleapiclient.errors import HttpError
 from src.logger import get_logger
 from src.data_models import League, Team, Player
 from src.google_auth import get_google_sheets_service
+from config import Config
 
 logger = get_logger(__name__)
 
@@ -18,6 +19,34 @@ logger = get_logger(__name__)
 class SheetGenerationError(Exception):
     """Exception raised for sheet generation errors."""
     pass
+
+
+def _create_sheet_protection_request(sheet_id: int, sheet_name: str, owner_email: str) -> dict:
+    """
+    Create a request to protect a sheet with owner-only edit access.
+
+    Args:
+        sheet_id: The Google Sheets sheet ID to protect.
+        sheet_name: The name of the sheet (for warning message).
+        owner_email: Email address of the owner who can edit (e.g., "user@gmail.com").
+
+    Returns:
+        dict: Protection request for batchUpdate API.
+    """
+    return {
+        'addProtectedRange': {
+            'protectedRange': {
+                'range': {
+                    'sheetId': sheet_id
+                },
+                'description': f'Protected sheet: {sheet_name}',
+                'warningOnly': False,
+                'editors': {
+                    'users': [owner_email]
+                }
+            }
+        }
+    }
 
 
 def _get_current_timestamp() -> str:
@@ -445,6 +474,11 @@ def create_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
             }
         ]
 
+        # Add protection if owner email is configured
+        if Config.OWNER_EMAIL:
+            logger.debug(f"Adding protection to Summary sheet (owner: {Config.OWNER_EMAIL})")
+            requests.append(_create_sheet_protection_request(0, 'Summary', Config.OWNER_EMAIL))
+
         service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
             body={'requests': requests}
@@ -768,6 +802,48 @@ def _create_team_sheet_formatting(sheet_id: int, num_players: int) -> List[dict]
     return format_requests
 
 
+def create_draft_picks_sheet(service: Any, spreadsheet_id: str) -> None:
+    """
+    Create a blank "Draft Picks" sheet for manual tracking.
+
+    This sheet is positioned after the Summary sheet and is intended for
+    manual data entry. It will be:
+    - Skipped during normal updates (content preserved)
+    - Cleared during force full updates (reset to blank)
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+
+    Raises:
+        SheetGenerationError: If sheet creation fails.
+    """
+    logger.info("Creating Draft Picks sheet...")
+
+    try:
+        # Create a new sheet for draft picks at position 1 (after Summary)
+        requests = [{
+            'addSheet': {
+                'properties': {
+                    'title': 'Draft Picks',
+                    'index': 1  # Position after Summary (which is at index 0)
+                }
+            }
+        }]
+
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': requests}
+        ).execute()
+
+        logger.info("✓ Draft Picks sheet created (blank)")
+
+    except Exception as e:
+        error_msg = f"Failed to create Draft Picks sheet: {e}"
+        logger.error(error_msg)
+        raise SheetGenerationError(error_msg) from e
+
+
 def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
     """
     Create a sheet for a team's roster.
@@ -820,6 +896,11 @@ def create_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
         num_players = len(sorted_roster)
         format_requests = _create_team_sheet_formatting(sheet_id, num_players)
 
+        # Add protection if owner email is configured
+        if Config.OWNER_EMAIL:
+            logger.debug(f"Adding protection to team sheet '{team.team_name}' (owner: {Config.OWNER_EMAIL})")
+            format_requests.append(_create_sheet_protection_request(sheet_id, team.team_name, Config.OWNER_EMAIL))
+
         service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
             body={'requests': format_requests}
@@ -866,6 +947,9 @@ def generate_league_report(league: League, sheet_title: Optional[str] = None) ->
         # Create summary sheet (replaces default Sheet1)
         create_summary_sheet(service, spreadsheet_id, league)
 
+        # Create Draft Picks sheet (positioned after Summary)
+        create_draft_picks_sheet(service, spreadsheet_id)
+
         # Create a sheet for each team
         sorted_teams = sorted(league.teams, key=lambda t: t.team_name)
         for team in sorted_teams:
@@ -878,7 +962,7 @@ def generate_league_report(league: League, sheet_title: Optional[str] = None) ->
         logger.info("✓ League report generated successfully!")
         logger.info("=" * 80)
         logger.info(f"Spreadsheet URL: {sheet_url}")
-        logger.info(f"Sheets created: 1 summary + {len(sorted_teams)} team sheets")
+        logger.info(f"Sheets created: 1 summary + 1 draft picks + {len(sorted_teams)} team sheets")
         stats = league.get_league_stats()
         logger.info(f"Total players: {stats['total_players']}")
         logger.info("=" * 80)

@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from config import Config
 from src.logger import get_logger
 from src.yahoo_data_fetcher import YahooDataFetcher
-from src.sheet_generator import generate_league_report
+from src.sheet_generator import generate_league_report, create_draft_picks_sheet
 from src.sheet_reader import extract_spreadsheet_id_from_url, read_last_run_timestamp, validate_sheet_structure, batch_read_initial_data
-from src.sheet_updater import update_team_sheet, update_summary_sheet
+from src.sheet_updater import update_team_sheet, update_summary_sheet, clear_draft_picks_sheet
 from src.transaction_tracker import get_transactions_since, get_affected_team_ids
 from src.google_auth import get_google_sheets_service
 from src.discord_notifier import notify_update_complete, notify_error
@@ -325,6 +325,25 @@ def main():
                 print("⊘ No timestamp found. Treating as first update.")
             print()
 
+            # Step 2b.5: Ensure Draft Picks sheet exists (migration support)
+            print("Step 2b.5: Checking for Draft Picks sheet...")
+            try:
+                from src.sheet_updater import _find_sheet_id_by_name
+
+                draft_picks_sheet_id = _find_sheet_id_by_name(service, spreadsheet_id, 'Draft Picks')
+
+                if draft_picks_sheet_id is None:
+                    print("→ Draft Picks sheet not found. Creating it...")
+                    create_draft_picks_sheet(service, spreadsheet_id)
+                    print("✓ Draft Picks sheet created")
+                else:
+                    print("✓ Draft Picks sheet exists")
+            except Exception as e:
+                logger.error(f"Failed to check/create Draft Picks sheet: {e}")
+                print(f"⚠ Warning: Draft Picks sheet check failed: {e}")
+                # Continue anyway - not critical
+            print()
+
             # Step 2c: Get transactions since last run
             print("Step 2c: Checking for transactions since last run...")
             if last_run_timestamp and not args.force_full_update:
@@ -370,6 +389,18 @@ def main():
                 print(f"⚠ Warning: Orphan cleanup failed: {e}")
                 # Continue anyway - not critical
             print()
+
+            # Step 2c.6: Clear Draft Picks sheet if force full update
+            if args.force_full_update:
+                print("Step 2c.6: Clearing Draft Picks sheet (force full update)...")
+                try:
+                    clear_draft_picks_sheet(service, spreadsheet_id)
+                    print("✓ Draft Picks sheet cleared")
+                except Exception as e:
+                    logger.error(f"Failed to clear Draft Picks sheet: {e}")
+                    print(f"⚠ Warning: Draft Picks clear failed: {e}")
+                    # Continue anyway - not critical
+                print()
 
             # Step 2d: Identify affected teams
             print("Step 2d: Identifying teams to update...")

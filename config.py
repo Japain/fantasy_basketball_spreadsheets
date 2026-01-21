@@ -38,6 +38,7 @@ class Config:
         "GOOGLE_CREDENTIALS_PATH",
         str(BASE_DIR / "credentials" / "google_credentials.json")
     )
+    OWNER_EMAIL: Optional[str] = os.getenv("OWNER_EMAIL")
 
     # Application Directories
     CACHE_DIR: str = os.getenv("CACHE_DIR", str(BASE_DIR / "league_data"))

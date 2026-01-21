@@ -23,8 +23,10 @@ from src.sheet_generator import (
     _create_team_sheet_formatting,
     _get_current_timestamp,
     _format_timestamp_for_display,
+    _create_sheet_protection_request,
     create_team_sheet
 )
+from config import Config
 
 logger = get_logger(__name__)
 
@@ -32,6 +34,72 @@ logger = get_logger(__name__)
 class SheetUpdateError(Exception):
     """Exception raised for sheet update errors."""
     pass
+
+
+def _apply_sheet_protection(service: Any, spreadsheet_id: str, sheet_id: int, sheet_name: str) -> None:
+    """
+    Apply protection to a sheet (owner-only edit access).
+
+    This function removes any existing protection and applies new protection
+    with the configured owner email. If no owner email is configured, this
+    function does nothing.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+        sheet_id: The sheet ID to protect.
+        sheet_name: The name of the sheet (for logging).
+
+    Raises:
+        SheetUpdateError: If protection fails (non-critical - logged but doesn't stop update).
+    """
+    if not Config.OWNER_EMAIL:
+        logger.debug(f"Skipping protection for '{sheet_name}' (no owner email configured)")
+        return
+
+    try:
+        # First, get existing protected ranges to remove them
+        spreadsheet = service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            fields='sheets(properties,protectedRanges)'
+        ).execute()
+
+        # Find and remove existing protections for this sheet
+        delete_requests = []
+        for sheet in spreadsheet.get('sheets', []):
+            current_sheet_id = sheet.get('properties', {}).get('sheetId')
+            if current_sheet_id == sheet_id:
+                for protected_range in sheet.get('protectedRanges', []):
+                    protected_range_id = protected_range.get('protectedRangeId')
+                    if protected_range_id:
+                        delete_requests.append({
+                            'deleteProtectedRange': {
+                                'protectedRangeId': protected_range_id
+                            }
+                        })
+                        logger.debug(f"Removing existing protection from '{sheet_name}' (ID: {protected_range_id})")
+
+        # Execute deletes and adds separately to avoid conflicts
+        if delete_requests:
+            service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': delete_requests}
+            ).execute()
+            logger.debug(f"Removed {len(delete_requests)} existing protection(s) from '{sheet_name}'")
+
+        # Add new protection
+        add_requests = [_create_sheet_protection_request(sheet_id, sheet_name, Config.OWNER_EMAIL)]
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': add_requests}
+        ).execute()
+
+        logger.debug(f"Applied protection to '{sheet_name}' (owner: {Config.OWNER_EMAIL})")
+
+    except Exception as e:
+        # Log error but don't raise - protection is non-critical
+        error_msg = f"Failed to apply protection to '{sheet_name}': {e}"
+        logger.warning(error_msg)
 
 
 def _find_sheet_id_by_name(service: Any, spreadsheet_id: str, sheet_name: str) -> Optional[int]:
@@ -487,13 +555,17 @@ def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids:
             sheets_by_name[sheet_title] = (sheet_id, True)
 
         # Identify sheets that are NOT in the metadata cache (old format or no team_id)
+        # Define special sheets that should never be deleted
+        SPECIAL_SHEETS = {'Summary', 'Draft Picks'}
+
         for sheet in sheets:
             properties = sheet.get('properties', {})
             sheet_id = properties.get('sheetId')
             sheet_title = properties.get('title')
 
-            # Skip Summary sheet
-            if sheet_title == 'Summary':
+            # Skip special sheets (Summary, Draft Picks, etc.)
+            if sheet_title in SPECIAL_SHEETS:
+                logger.debug(f"Skipping special sheet: '{sheet_title}'")
                 continue
 
             # If sheet is not in metadata cache, it's an old-format sheet
@@ -655,6 +727,9 @@ def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
         ).execute()
         logger.debug(f"Applied formatting to '{sheet_title}'")
 
+        # Apply protection to the sheet
+        _apply_sheet_protection(service, spreadsheet_id, sheet_id, sheet_title)
+
         logger.info(f"✓ Updated sheet for: {team.team_name} ({num_players} players, ${team.total_salary})")
 
     except Exception as e:
@@ -749,12 +824,56 @@ def update_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
             body=body
         ).execute()
 
+        # Apply protection to the Summary sheet (sheet_id is always 0)
+        _apply_sheet_protection(service, spreadsheet_id, 0, 'Summary')
+
         logger.info(f"✓ Summary sheet updated (Timestamp: {human_readable_timestamp})")
 
     except Exception as e:
         error_msg = f"Failed to update summary sheet: {e}"
         logger.error(error_msg)
         raise SheetUpdateError(error_msg) from e
+
+
+def clear_draft_picks_sheet(service: Any, spreadsheet_id: str) -> None:
+    """
+    Clear all content from the Draft Picks sheet (reset to blank).
+
+    This function is called during force full update mode to reset the manually-
+    managed Draft Picks sheet to a blank state. During normal updates, this
+    sheet is left untouched to preserve manual entries.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+
+    Raises:
+        SheetUpdateError: If clearing fails (non-critical - logged but doesn't stop update).
+    """
+    logger.info("Clearing Draft Picks sheet...")
+
+    try:
+        # Check if Draft Picks sheet exists
+        sheet_id = _find_sheet_id_by_name(service, spreadsheet_id, 'Draft Picks')
+
+        if sheet_id is None:
+            logger.debug("Draft Picks sheet not found - skipping clear operation")
+            return
+
+        # Clear all content from the sheet
+        clear_range = "'Draft Picks'!A1:Z1000"
+        service.spreadsheets().values().clear(
+            spreadsheetId=spreadsheet_id,
+            range=clear_range
+        ).execute()
+
+        logger.info("✓ Draft Picks sheet cleared (reset to blank)")
+
+    except Exception as e:
+        error_msg = f"Failed to clear Draft Picks sheet: {e}"
+        logger.error(error_msg)
+        # Log error but don't raise - clearing is non-critical
+        # This allows the update to continue even if Draft Picks clear fails
 
 
 def update_timestamp(service: Any, spreadsheet_id: str) -> None:
