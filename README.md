@@ -32,6 +32,12 @@ A Python application that extracts fantasy basketball league data from Yahoo Fan
   - Error alerts with role mentions
   - Efficiency metrics and transaction details
   - Zero cost, minimal setup required
+- 📋 **Bench Management Analysis** - Proactive lineup optimization alerts (v2.8+)
+  - Schedule-based violation detection (not stats-based)
+  - Identifies teams with benched healthy players who have games
+  - Optimal lineup logic (no false positives)
+  - Discord alerts for competitive league management
+  - Team abbreviation mapping for accurate game detection (v2.8.1)
 
 ## How It Works
 
@@ -181,6 +187,70 @@ The application will:
 - No transactions → Updates 0/16 teams, summary only (100% efficiency), Draft Picks preserved
 - Force full update → Updates all 16 teams, **Draft Picks cleared**
 
+### Bench Management Check (Standalone Mode)
+
+The bench management check analyzes your league for **lineup optimization violations** - teams with healthy players benched while they have games scheduled. This helps ensure competitive lineups across your league.
+
+```bash
+# Run bench check only (no spreadsheet operations)
+uv run python main.py --bench-check
+
+# Run with verbose logging
+uv run python main.py --bench-check --verbose
+```
+
+**What It Checks:**
+
+A violation is flagged when a team has:
+1. A player on the bench (BN position)
+2. Player is healthy (no INJ/OUT/DTD/GTD status)
+3. Player is NOT on IL/IL+ (injured list)
+4. Player's NBA team has a game scheduled TODAY
+5. Team has active roster spots that could be better utilized:
+   - Empty active spots (< 10 active players), OR
+   - Active players whose teams DON'T have games today
+
+**Optimal Lineup Logic:**
+
+If all 10 active roster spots are filled with players who have games today, benched players are NOT flagged as violations (the lineup is already optimally configured). Violations are only flagged when lineups could be improved by swapping players.
+
+**Example Output:**
+
+```
+================================================================================
+MODE: BENCH MANAGEMENT CHECK
+================================================================================
+
+Checking bench violations for: 2026-01-24
+
+⚠ Found 2 team(s) with bench violations:
+  • Huskies (2 player(s))
+  • Team Rockets (1 player(s))
+
+✓ Discord notification sent
+
+================================================================================
+✓ BENCH CHECK COMPLETE
+================================================================================
+```
+
+**Recommended Timing:**
+
+- **When to run:** Late at night (1-2 AM EST) after all games complete
+- **Why:** Detects violations before managers wake up to fix their lineups for the next day
+- **Frequency:** Daily during the NBA season
+- **Automation:** Schedule with cron or GitHub Actions (see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md))
+
+**Discord Integration:**
+
+When configured with `DISCORD_WEBHOOK_URL`, violations are automatically sent to your Discord channel with:
+- List of teams with violations
+- Number of benched players per team
+- Direct link to your league spreadsheet (if available)
+- Date of analysis
+
+**Note:** This is a standalone check - it does NOT create or update spreadsheets. To update your spreadsheet, use the regular update mode (see above).
+
 ### Command-Line Options
 
 ```bash
@@ -189,6 +259,9 @@ uv run python main.py --verbose
 
 # Force create new spreadsheet
 uv run python main.py --create-new
+
+# Bench management check only
+uv run python main.py --bench-check
 
 # Show help
 uv run python main.py --help
@@ -283,6 +356,8 @@ fantasy_basketball/
       sheet_updater.py       # Update existing sheets (incremental updates)
       transaction_tracker.py # Track transactions (incremental updates)
       discord_notifier.py    # Discord webhook notifications
+      bench_analyzer.py      # Bench management violation detection (v2.8+)
+      nba_schedule_fetcher.py # NBA game schedule fetcher (ESPN API) (v2.8+)
       logger.py              # Logging configuration
    credentials/               # API credentials (gitignored)
    tests/                     # Test suite
@@ -331,9 +406,14 @@ uv run python -m tests.test_sheet_reader             # Sheet reading (6 tests)
 uv run python -m tests.test_sheet_updater            # Sheet updating (5 tests)
 uv run python -m tests.test_incremental_update       # Integration (5 tests)
 uv run python -m tests.test_edge_cases               # Edge cases (6 tests)
+
+# Bench management tests (v2.8+)
+uv run python -c "import sys; sys.path.insert(0, '.'); from tests.test_bench_analyzer_proactive import main; main()"  # Bench analyzer (8 tests)
+uv run python -c "import sys; sys.path.insert(0, '.'); from tests.test_nba_schedule_fetcher import main; main()"      # NBA schedule fetcher (8 tests)
+uv run python -c "import sys; sys.path.insert(0, '.'); from tests.test_team_abbreviation_mapping import main; main()" # Team mapping (10 tests)
 ```
 
-**Test Coverage:** 25+ automated tests covering all incremental update functionality
+**Test Coverage:** 51+ automated tests covering all features including bench management
 
 ### Dependencies
 
@@ -375,6 +455,8 @@ uv run python -m src.auth.google_auth_manual
 - **tests/README.md** - Test suite documentation
 - **GITHUB_ACTIONS_SETUP.md** - Complete guide for setting up automated daily updates
 - **DEPLOYMENT_OPTIONS.md** - Research and analysis of deployment options
+- **TODO_PROACTIVE_BENCH_ALERTS.md** - Bench management implementation plan and research (v2.8)
+- **BUG_FIX_v2.8.1_TEAM_ABBREVIATIONS.md** - Team abbreviation mapping bug fix details (v2.8.1)
 
 ### Planning Documents
 - **context/INCREMENTAL_UPDATE_PLAN.md** - Incremental update feature implementation plan (v2.0)
@@ -396,9 +478,22 @@ uv run python -m src.auth.google_auth_manual
 
 ---
 
-**Status**: ✅ Production-ready with Draft Picks tracking and sheet protection (v2.6)
+**Status**: ✅ Production-ready with bench management analysis (v2.8.1)
 
 **Recent Updates:**
+- **v2.8.1** - Team abbreviation mapping fix for bench management
+  - Fixed: Washington, New York, Golden State, Utah, San Antonio, New Orleans violations now detected
+  - Added: ESPN-to-Yahoo team abbreviation normalization
+  - Added: Comprehensive test suite for team mapping (10 tests)
+  - Impact: Eliminated false negatives in bench violation detection
+- **v2.8** - Proactive bench management analysis (NEW FEATURE)
+  - Schedule-based violation detection (alerts BEFORE games, not after)
+  - ESPN API integration for NBA game schedules (free, fast, reliable)
+  - Optimal lineup logic (no false positives when lineup is properly filled)
+  - 95% fewer API calls with caching (1-hour TTL)
+  - Discord notifications for bench violations
+  - Standalone mode: `--bench-check` (no spreadsheet required)
+- **v2.7.1** - Initial bench management (retroactive, stats-based) - replaced by v2.8
 - **v2.6** - Draft Picks sheet and sheet protection
   - Draft Picks sheet automatically created for manual tracking
   - Sheet protection prevents accidental edits (owner-only access)

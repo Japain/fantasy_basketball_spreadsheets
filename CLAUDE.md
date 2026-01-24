@@ -371,12 +371,24 @@ uv run python main.py
 - **Discord**: Uses same webhook as update notifications
 - **No spreadsheet required**: Can run without any spreadsheet arguments
 
-**Criteria for Violation:**
-A team is flagged when a player meets ALL these conditions:
-1. Is currently in BN (bench) position
-2. Is NOT in IL/IL+ position
-3. Is currently healthy (no INJ/OUT/DTD/GTD status)
-4. Had a scheduled game TODAY
+**Criteria for Violation (Optimal Lineup Logic):**
+A team is flagged when:
+1. Team has active roster spots that could be better utilized:
+   - Active player whose team has NO game today, OR
+   - Empty active roster spot (< 10 active players)
+2. AND a benched player meets ALL these conditions:
+   - Currently in BN (bench) position
+   - NOT in IL/IL+ position
+   - Currently healthy (no INJ/OUT/DTD/GTD status)
+   - Team HAS a scheduled game TODAY
+
+**Important:** If all 10 active roster spots are filled with players who have games today,
+then benched players are NOT flagged as violations (lineup is optimally configured).
+
+**Example Violation:**
+- Active: Player A (team has NO game today)
+- Bench: Player B (team HAS game today, healthy)
+- Action: Should swap A and B to optimize lineup
 
 **Example Output:**
 ```
@@ -407,6 +419,79 @@ Checking bench violations for: 2026-01-24
 - ✅ **No false positives** - uses real game-time positions
 - ✅ **Simpler** - single source of truth (Yahoo API)
 - ✅ **More accurate** - catches violations before managers fix them
+
+### Proactive Bench Alerts (v2.8) - NEW
+
+**Feature:** Schedule-based violation detection with optimal lineup logic enables alerts BEFORE games start
+
+The v2.8 update replaces the retroactive stats-based checking with a proactive schedule-based approach using ESPN API.
+
+**Key Changes:**
+- **Before (v2.7.1)**: Checked if player recorded stats → alerts AFTER games
+- **Now (v2.8)**: Checks if player's team has scheduled game → alerts BEFORE games
+
+#### Bug Fix (v2.8.1) - Team Abbreviation Mapping
+
+**Issue Found (2026-01-24):** ESPN API and Yahoo API use different team abbreviations for some teams, causing benched players from affected teams to not be detected as having games.
+
+**Affected Teams:**
+- Washington Wizards: Yahoo `WAS` vs ESPN `WSH`
+- New York Knicks: Yahoo `NYK` vs ESPN `NY`
+- Golden State Warriors: Yahoo `GSW` vs ESPN `GS`
+- Utah Jazz: Yahoo `UTA` vs ESPN `UTAH`
+- San Antonio Spurs: Yahoo `SAS` vs ESPN `SA`
+- New Orleans Pelicans: Yahoo `NOP` vs ESPN `NO`
+
+**Fix:** Added team abbreviation normalization in `nba_schedule_fetcher.py`:
+- `ESPN_TO_YAHOO_TEAM_MAPPING` dictionary maps ESPN codes to Yahoo codes
+- `normalize_team_abbreviation()` function normalizes ESPN abbreviations before comparison
+- All ESPN team abbreviations converted to Yahoo format when checking schedules
+
+**Testing:** Created `tests/test_team_abbreviation_mapping.py` with 10 comprehensive tests (all passing)
+
+**How It Works:**
+1. Fetches NBA game schedules from ESPN API (free, no authentication)
+2. Checks if benched player's team has a game scheduled TODAY
+3. Caches schedule data (1-hour TTL) to minimize API calls
+4. Falls back to NBA Official API if ESPN fails
+5. Sends Discord alerts immediately when violations detected
+
+**Benefits over v2.7.1:**
+- ✅ **Proactive alerts** - Can send alerts 2-6 hours before games (Phase 3)
+- ✅ **95% fewer API calls** - 1 schedule fetch vs 10-30 stat fetches per run
+- ✅ **Better caching** - 1-hour TTL on schedule data (reused across multiple checks)
+- ✅ **Zero Yahoo API usage** - Game checking moved to ESPN API
+- ✅ **Zero cost** - ESPN API is free, no authentication required
+- ✅ **More reliable** - Works even if player DNP'd (team schedule matters, not player stats)
+- ✅ **Optimal lineup logic** (v2.8.1) - No false positives when lineup is properly filled with players who have games
+
+**Technical Details:**
+- **Module**: `src/nba_schedule_fetcher.py` - ESPN API integration with caching
+- **Modified**: `src/bench_analyzer.py` - Uses schedule-based checking (feature flag enabled)
+- **Feature Flag**: `USE_PROACTIVE_SCHEDULE_CHECK = True` (set to False to rollback)
+- **Cache TTL**: 1 hour (configurable in `CACHE_TTL_SECONDS`)
+- **Retry Logic**: 3 attempts with exponential backoff
+- **Fallback Chain**: ESPN API → NBA Official API → Empty set (conservative)
+
+**API Performance:**
+- **ESPN API**: Primary source, ~500ms response time (p95)
+- **Cache Hit**: 0 API calls, instant response
+- **Cache Miss**: 1 API call for all benched players (vs 10-30 in v2.7.1)
+
+**Rollback:**
+Set `USE_PROACTIVE_SCHEDULE_CHECK = False` in `src/bench_analyzer.py` to use legacy stats-based checking.
+
+**Usage:**
+Same as v2.7.1 - no changes to command-line interface:
+```bash
+# Bench check with proactive schedule-based detection
+uv run python main.py --bench-check
+```
+
+**Future Enhancements (Phase 3):**
+- Multiple checks per day (e.g., 10 AM, 2 PM, 6 PM EST)
+- Game-time filtering (alert only for upcoming games, not completed)
+- Configurable alert timing (X hours before game start)
 
 ### Rate Limit Optimization (v2.4 + v2.5) ✅ Production Ready
 

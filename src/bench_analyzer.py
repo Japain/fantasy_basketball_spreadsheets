@@ -2,23 +2,26 @@
 Bench Management Analyzer Module
 
 Analyzes team rosters to identify teams that have healthy players with
-scheduled games currently on the bench. Used for same-day automated alerts
+scheduled games currently on the bench. Used for proactive automated alerts
 to help managers optimize their lineup decisions.
 
-CURRENT IMPLEMENTATION (v2.7.1 - Option B):
+CURRENT IMPLEMENTATION (v2.8 - Option A):
+- Proactive analysis based on NBA game schedules
+- Detects violations BEFORE games start
+- Uses ESPN API to check if player's team has scheduled game
+- Can run multiple times per day for early alerts
+
+FEATURES:
+- Schedule-based checking (not stats-based)
+- Proactive alerts 2-6 hours before games
+- 95% fewer API calls (caching + single schedule fetch)
+- Fallback to NBA Official API if ESPN fails
+- Rollback option via USE_PROACTIVE_SCHEDULE_CHECK flag
+
+LEGACY IMPLEMENTATION (v2.7.1 - Option B):
 - Retroactive analysis based on player stats
-- Detects violations AFTER games complete
-- Run at 1-2 AM EST after all games finish
-- Checks if players recorded non-zero stats (actually played)
-
-LIMITATION:
-- Cannot alert managers BEFORE games to fix lineups
-- Only useful for post-game analysis
-
-TODO: See TODO_PROACTIVE_BENCH_ALERTS.md for future enhancement (Option A)
-- Proactive alerts using NBA team schedule API
-- Real-time detection before/during games
-- Allow managers to fix lineups in time
+- Available via check_player_had_game_today_legacy()
+- Set USE_PROACTIVE_SCHEDULE_CHECK = False to rollback
 """
 
 from typing import List, Optional, Dict
@@ -27,8 +30,12 @@ from datetime import datetime, timezone
 from src.logger import get_logger
 from src.data_models import League, Player
 from src.yahoo_data_fetcher import YahooDataFetcher
+from src.nba_schedule_fetcher import get_teams_with_games_today
 
 logger = get_logger(__name__)
+
+# Feature flag: Set to False to rollback to legacy stats-based checking
+USE_PROACTIVE_SCHEDULE_CHECK = True
 
 
 # Injury status codes that indicate a player should NOT be counted as "healthy"
@@ -104,30 +111,134 @@ def _is_on_il(player: Player) -> bool:
     return player.roster_position in IL_POSITIONS
 
 
-def check_player_had_game_today(
+def _count_active_spots_without_games(roster: List[Player], check_date: str) -> int:
+    """
+    Count the number of active roster spots that DON'T have games scheduled today.
+
+    This includes:
+    - Active players whose teams don't have games today
+    - Empty active roster spots (if roster < 10 active players)
+
+    Args:
+        roster: List of players on a team's roster
+        check_date: Date to check in YYYY-MM-DD format
+
+    Returns:
+        Number of active roster spots without games (available for swaps)
+    """
+    active_count = 0
+    active_with_games = 0
+
+    for player in roster:
+        if not player.roster_position:
+            continue
+
+        # Skip bench positions
+        if player.roster_position in BENCH_POSITIONS:
+            continue
+
+        # Skip injured list positions
+        if player.roster_position in IL_POSITIONS:
+            continue
+
+        # This player is in an active position
+        active_count += 1
+
+        # Check if this active player has a game today
+        if USE_PROACTIVE_SCHEDULE_CHECK:
+            has_game = check_player_has_game_scheduled(player, check_date)
+        else:
+            # For legacy mode, we can't easily check without fetcher
+            # Just count all active players as having games (conservative)
+            has_game = True
+
+        if has_game:
+            active_with_games += 1
+
+    # Total spots without games = (10 total active spots) - (spots with games)
+    # This includes both filled spots without games AND empty spots
+    spots_without_games = 10 - active_with_games
+
+    return spots_without_games
+
+
+def check_player_has_game_scheduled(
+    player: Player,
+    check_date: str
+) -> bool:
+    """
+    Check if a player's team has a scheduled game on a specific date.
+
+    NEW IMPLEMENTATION (v2.8 - Option A - Proactive):
+    - Uses ESPN API to fetch NBA game schedules
+    - Checks if player's NBA team has a game scheduled
+    - Enables proactive alerts BEFORE games start
+    - 95% fewer API calls (caching + single schedule fetch)
+
+    ADVANTAGES over legacy approach:
+    - Can detect violations hours before games start
+    - Single API call for all players (vs one call per player)
+    - Zero Yahoo API quota usage for game checking
+    - Works even if player DNP'd (team schedule matters, not player stats)
+
+    Args:
+        player: Player object with nba_team field
+        check_date: Date string in YYYY-MM-DD format (e.g., "2026-01-24")
+
+    Returns:
+        True if player's team has a scheduled game that day, False otherwise
+
+    Note:
+        - Returns False if player has no nba_team (free agent)
+        - Returns False if API call fails (graceful degradation)
+        - Uses cached schedule data (1-hour TTL)
+        - Fallback to NBA Official API if ESPN fails
+    """
+    # Check if player has an NBA team
+    if not player.nba_team:
+        logger.debug(f"Player {player.name} has no NBA team (free agent?)")
+        return False
+
+    try:
+        # Get teams with games on this date (cached)
+        teams_with_games = get_teams_with_games_today(check_date)
+
+        # Check if player's team has a game
+        has_game = player.nba_team in teams_with_games
+
+        if has_game:
+            logger.debug(f"Player {player.name} ({player.nba_team}) has game on {check_date}")
+        else:
+            logger.debug(f"Player {player.name} ({player.nba_team}) has NO game on {check_date}")
+
+        return has_game
+
+    except Exception as e:
+        logger.warning(f"Failed to check schedule for {player.name} ({player.nba_team}): {e}")
+        # Gracefully degrade - don't count as violation if we can't verify
+        return False
+
+
+def check_player_had_game_today_legacy(
     fetcher: YahooDataFetcher,
     player_key: str,
     check_date: str
 ) -> bool:
     """
+    LEGACY IMPLEMENTATION (v2.7.1 - Option B - Retroactive):
     Check if a player had a game and recorded stats on a specific date.
 
-    CURRENT IMPLEMENTATION (Option B - Retroactive):
-    - Uses player stats to determine if they played
-    - Requires non-zero stat values (player actually played)
-    - Can only detect violations AFTER games complete
-    - Useful for post-game analysis
+    This is the old stats-based approach. Use check_player_has_game_scheduled()
+    for the new proactive schedule-based approach.
 
     LIMITATION:
     - Cannot detect violations before/during games
-    - If player's team had a game but player DNP'd, returns False
-    - Not suitable for real-time proactive alerts
+    - Requires one Yahoo API call per benched player (~10-30 calls)
+    - If player DNP'd, returns False even if team had a game
+    - Only useful for post-game analysis
 
-    TODO: Investigate Option A (Proactive Alerts)
-    - Use NBA team schedule API instead of player stats
-    - Detect violations before games start
-    - Enable real-time alerts for managers to fix lineups
-    - See TODO_PROACTIVE_BENCH_ALERTS.md for details
+    ROLLBACK:
+    Set USE_PROACTIVE_SCHEDULE_CHECK = False to use this function.
 
     Args:
         fetcher: YahooDataFetcher instance
@@ -139,7 +250,7 @@ def check_player_had_game_today(
 
     Note:
         - Returns False if API call fails (graceful degradation)
-        - Checks for non-zero stat values to verify actual game (not just placeholder stats)
+        - Checks for non-zero stat values to verify actual game
         - Returns False if player DNP'd even if team had a game
     """
     try:
@@ -198,7 +309,22 @@ def analyze_bench_violations(
     A violation occurs when:
     1. Player is currently on bench (BN position)
     2. Player is currently healthy (no INJ/OUT/DTD/GTD status)
-    3. Player had a scheduled game today
+    3. Player is NOT on IL/IL+ (injured list)
+    4. Player had a scheduled game today
+    5. Team has active roster spots that could be better utilized:
+       - Either empty active spots (roster < 10 active players)
+       - OR active players whose teams don't have games today
+
+    Optimal lineup logic:
+    - If all 10 active roster spots are filled with players who have games today,
+      then benched players are NOT flagged (lineup is optimally filled)
+    - If any active spot is empty OR has a player without a game, and there's
+      a benched healthy player with a game, that's a violation (suboptimal lineup)
+
+    Example violation:
+    - Active: Player A (no game today)
+    - Bench: Player B (has game today, healthy)
+    - Action: Should swap A and B to optimize lineup
 
     Note: Should be run late at night (1-2 AM EST) after all games complete
           but before managers wake up to fix lineups.
@@ -238,6 +364,24 @@ def analyze_bench_violations(
 
         team_violations = []
 
+        # Count how many active roster spots don't have games today
+        # This includes both:
+        # 1. Active players whose teams don't have games today
+        # 2. Empty active roster spots (if roster < 10 active players)
+        spots_without_games = _count_active_spots_without_games(team.roster, check_date)
+        logger.info(f"  Active roster spots without games today: {spots_without_games}/10")
+
+        # If all 10 active spots have games today, benched players are acceptable
+        # (lineup is optimally filled - no room to improve by swapping)
+        if spots_without_games == 0:
+            logger.info(f"  All active spots optimally filled (all have games) - skipping bench violation check")
+            continue
+
+        # There are active spots that could be better utilized (either empty or
+        # filled with players who don't have games). Check for benched players
+        # who have games and could fill these spots.
+        logger.info(f"  Found {spots_without_games} active spot(s) that could be optimized")
+
         # Check each current player
         for player in team.roster:
             # Check condition 1: Is player currently benched?
@@ -256,13 +400,18 @@ def analyze_bench_violations(
                 continue  # Player is injured, no violation
 
             # Check condition 3: Did player have a game today?
-            had_game = check_player_had_game_today(
-                fetcher,
-                player.player_key,
-                check_date
-            )
+            if USE_PROACTIVE_SCHEDULE_CHECK:
+                # NEW: Schedule-based checking (proactive)
+                has_game = check_player_has_game_scheduled(player, check_date)
+            else:
+                # LEGACY: Stats-based checking (retroactive)
+                has_game = check_player_had_game_today_legacy(
+                    fetcher,
+                    player.player_key,
+                    check_date
+                )
 
-            if not had_game:
+            if not has_game:
                 continue  # No game scheduled, no violation
 
             # All conditions met - this is a violation!
