@@ -329,6 +329,85 @@ The application can automatically protect all sheets (except Draft Picks) to pre
 
 **Note:** The owner email must match the Google account that has access to the spreadsheet. Other users with view access will see a lock icon and cannot edit protected sheets.
 
+### Bench Management Alerts (v2.7.1)
+
+The application includes optional bench management analysis for same-day lineup optimization alerts.
+
+**Features:**
+- 🔍 **Same-day analysis** - Checks current lineups for today's games
+- ⚠️ **Violation detection** - Identifies teams with benched healthy players
+- 🔔 **Discord alerts** - Immediate notifications via webhook
+- 📊 **Single source of truth** - Uses Yahoo API only (no spreadsheet)
+- ⚡ **Non-critical** - Analysis failures don't break main workflow
+
+**How It Works:**
+1. Run late at night (1-2 AM EST) after games complete
+2. Fetch current roster positions from Yahoo API
+3. Check current player health status from Yahoo API
+4. Verify which players had games TODAY
+5. Identify violations: benched + healthy + had game
+6. Send Discord notification immediately
+
+**Usage:**
+```bash
+# Bench check only (no spreadsheet operations)
+uv run python main.py --bench-check
+
+# Regular spreadsheet update (no bench check)
+uv run python main.py --spreadsheet-id "YOUR_ID"
+
+# Create new spreadsheet (no bench check)
+uv run python main.py
+```
+
+**Scheduling:**
+- **Bench Check**: Run at 1-2 AM EST via cron/GitHub Actions with `--bench-check`
+- **Timing**: After all NBA games complete (~midnight EST)
+- **Before**: Managers wake up to fix lineups (~6-7 AM EST)
+- **Spreadsheet Updates**: Run separately at any time (e.g., hourly)
+
+**Configuration:**
+- **Standalone mode**: Use `--bench-check` flag
+- **Discord**: Uses same webhook as update notifications
+- **No spreadsheet required**: Can run without any spreadsheet arguments
+
+**Criteria for Violation:**
+A team is flagged when a player meets ALL these conditions:
+1. Is currently in BN (bench) position
+2. Is NOT in IL/IL+ position
+3. Is currently healthy (no INJ/OUT/DTD/GTD status)
+4. Had a scheduled game TODAY
+
+**Example Output:**
+```
+MODE: BENCH MANAGEMENT CHECK
+================================================================================
+
+Checking bench violations for: 2026-01-24
+
+⚠ Found 3 team(s) with bench violations:
+  • Team Alpha (2 player(s))
+  • Team Beta (1 player(s))
+  • Team Gamma (1 player(s))
+
+✓ Discord notification sent
+================================================================================
+✓ BENCH CHECK COMPLETE
+================================================================================
+```
+
+**Performance:**
+- Google Sheets: **0 read calls** (no spreadsheet needed)
+- Yahoo API: ~10-30 calls (one per benched player)
+- Total: **~10-30 API calls per run**
+- Non-blocking: Runs after league data fetch
+
+**Advantages over v2.7:**
+- ✅ **No timing issues** - checks same-day, not historical
+- ✅ **No false positives** - uses real game-time positions
+- ✅ **Simpler** - single source of truth (Yahoo API)
+- ✅ **More accurate** - catches violations before managers fix them
+
 ### Rate Limit Optimization (v2.4 + v2.5) ✅ Production Ready
 
 The application includes comprehensive rate limit handling to work within Google Sheets API quotas.

@@ -18,7 +18,11 @@ from src.sheet_reader import extract_spreadsheet_id_from_url, read_last_run_time
 from src.sheet_updater import update_team_sheet, update_summary_sheet, clear_draft_picks_sheet
 from src.transaction_tracker import get_transactions_since, get_affected_team_ids
 from src.google_auth import get_google_sheets_service
-from src.discord_notifier import notify_update_complete, notify_error
+from src.discord_notifier import notify_update_complete, notify_error, notify_bench_violations
+from src.bench_analyzer import (
+    analyze_bench_violations,
+    get_teams_with_bench_violations
+)
 import traceback
 
 logger = get_logger(__name__)
@@ -166,6 +170,11 @@ def main():
         action='store_true',
         help='Force creation of new spreadsheet even if ID/URL provided'
     )
+    parser.add_argument(
+        '--bench-check',
+        action='store_true',
+        help='Run bench management analysis only (no spreadsheet operations)'
+    )
 
     args = parser.parse_args()
 
@@ -176,6 +185,14 @@ def main():
 
     if args.create_new and (args.spreadsheet_url or args.spreadsheet_id):
         print("✗ Error: Cannot use --create-new with --spreadsheet-url or --spreadsheet-id")
+        return 1
+
+    if args.bench_check and (args.spreadsheet_url or args.spreadsheet_id or args.create_new):
+        print("✗ Error: --bench-check cannot be combined with spreadsheet arguments")
+        return 1
+
+    if args.bench_check and args.force_full_update:
+        print("✗ Error: --bench-check cannot be combined with --force-full-update")
         return 1
 
     if args.force_full_update and not (args.spreadsheet_url or args.spreadsheet_id):
@@ -236,7 +253,67 @@ def main():
             logger.warning(f"Discord error notification failed: {discord_err}")
         return 1
 
-    # Step 2: Create new spreadsheet or update existing one
+    # Mode 1: BENCH CHECK mode (standalone bench analysis)
+    if args.bench_check:
+        print("\n" + "=" * 80)
+        print("MODE: BENCH MANAGEMENT CHECK")
+        print("=" * 80)
+        print()
+
+        try:
+            # Use TODAY's date
+            today = datetime.now(timezone.utc)
+            today_date = today.strftime('%Y-%m-%d')
+
+            print(f"Checking bench violations for: {today_date}")
+            print()
+
+            # Analyze violations
+            violations = analyze_bench_violations(
+                league=league_data,
+                fetcher=fetcher,
+                check_date=today_date
+            )
+
+            # Get team list
+            teams_with_violations = get_teams_with_bench_violations(violations)
+
+            if teams_with_violations:
+                print(f"⚠ Found {len(teams_with_violations)} team(s) with bench violations:")
+                for team_name in teams_with_violations:
+                    violation_count = len(violations[team_name])
+                    print(f"  • {team_name} ({violation_count} player(s))")
+                print()
+
+                # Send Discord notification (no spreadsheet URL in this mode)
+                notify_bench_violations(
+                    teams_with_violations=teams_with_violations,
+                    spreadsheet_url="",  # No spreadsheet in this mode
+                    check_date=today_date
+                )
+
+                print("✓ Discord notification sent")
+            else:
+                print("✓ No bench violations found - all teams optimized their lineups!")
+
+            print()
+            print("=" * 80)
+            print("✓ BENCH CHECK COMPLETE")
+            print("=" * 80)
+            print()
+            return 0
+
+        except Exception as e:
+            logger.exception("Bench check failed")
+            print(f"\n✗ Error: Bench check failed: {e}\n")
+            notify_error(
+                error_message=str(e),
+                error_type="Bench Check Failed",
+                stack_trace=traceback.format_exc()
+            )
+            return 1
+
+    # Mode 2: CREATE mode or Mode 3: UPDATE mode
     if mode == 'create':
         # CREATE MODE: Generate new spreadsheet
         print("Step 2: Generating Google Sheets report...")

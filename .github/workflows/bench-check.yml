@@ -1,0 +1,117 @@
+name: Bench Management Check
+
+on:
+  schedule:
+    # Runs at 6:00 AM UTC daily (1:00 AM EST, 10:00 PM PST previous day)
+    # This is after most NBA games complete (~midnight EST) but before managers wake up
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  bench-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Create .env file
+        env:
+          YAHOO_CONSUMER_KEY: ${{ secrets.YAHOO_CONSUMER_KEY }}
+          YAHOO_CONSUMER_SECRET: ${{ secrets.YAHOO_CONSUMER_SECRET }}
+          YAHOO_ACCESS_TOKEN: ${{ secrets.YAHOO_ACCESS_TOKEN }}
+          YAHOO_REFRESH_TOKEN: ${{ secrets.YAHOO_REFRESH_TOKEN }}
+          YAHOO_TOKEN_TIME: ${{ secrets.YAHOO_TOKEN_TIME }}
+          NBA_LEAGUE_ID: ${{ secrets.NBA_LEAGUE_ID }}
+          NBA_GAME_ID: ${{ secrets.NBA_GAME_ID }}
+          INITIAL_AUCTION_BUDGET: ${{ secrets.INITIAL_AUCTION_BUDGET }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ALERT_ROLE_ID: ${{ secrets.DISCORD_ALERT_ROLE_ID }}
+        run: |
+          # Create YAHOO_ACCESS_TOKEN_JSON as a JSON string
+          YAHOO_ACCESS_TOKEN_JSON=$(cat <<EOF
+          {"access_token":"$YAHOO_ACCESS_TOKEN","consumer_key":"$YAHOO_CONSUMER_KEY","consumer_secret":"$YAHOO_CONSUMER_SECRET","guid":null,"refresh_token":"$YAHOO_REFRESH_TOKEN","token_time":$YAHOO_TOKEN_TIME,"token_type":"bearer"}
+          EOF
+          )
+
+          cat > .env << EOF
+          YAHOO_CONSUMER_KEY=$YAHOO_CONSUMER_KEY
+          YAHOO_CONSUMER_SECRET=$YAHOO_CONSUMER_SECRET
+          YAHOO_ACCESS_TOKEN_JSON=$YAHOO_ACCESS_TOKEN_JSON
+          NBA_LEAGUE_ID=$NBA_LEAGUE_ID
+          NBA_GAME_ID=$NBA_GAME_ID
+          INITIAL_AUCTION_BUDGET=$INITIAL_AUCTION_BUDGET
+          DISCORD_WEBHOOK_URL=$DISCORD_WEBHOOK_URL
+          DISCORD_ALERT_ROLE_ID=$DISCORD_ALERT_ROLE_ID
+          GAME_CODE=nba
+          EOF
+
+      - name: Run bench check
+        run: |
+          uv run python main.py --bench-check --verbose
+
+      - name: Send Discord error notification (fallback)
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ALERT_ROLE_ID: ${{ secrets.DISCORD_ALERT_ROLE_ID }}
+        run: |
+          # Only send if webhook URL is configured
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            # Format role mention
+            ROLE_MENTION=""
+            if [ -n "$DISCORD_ALERT_ROLE_ID" ]; then
+              ROLE_MENTION="<@&${DISCORD_ALERT_ROLE_ID}> "
+            fi
+
+            # Send error notification via curl
+            curl -X POST "$DISCORD_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"content\": \"${ROLE_MENTION}🚨 **Bench Check Failed**\",
+                \"embeds\": [{
+                  \"title\": \"GitHub Actions Workflow Failed\",
+                  \"description\": \"The automated bench management check encountered an error.\",
+                  \"color\": 16711680,
+                  \"fields\": [
+                    {
+                      \"name\": \"Workflow\",
+                      \"value\": \"${{ github.workflow }}\"
+                    },
+                    {
+                      \"name\": \"Repository\",
+                      \"value\": \"${{ github.repository }}\"
+                    },
+                    {
+                      \"name\": \"📋 Action Required\",
+                      \"value\": \"[View Workflow Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+                    }
+                  ],
+                  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"
+                }]
+              }"
+          fi
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-check-error-logs
+          retention-days: 7
+          path: |
+            *.log
+            league_data/

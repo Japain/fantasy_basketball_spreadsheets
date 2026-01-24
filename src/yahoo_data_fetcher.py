@@ -588,6 +588,11 @@ class YahooDataFetcher:
         if nba_team:
             nba_team = str(nba_team)
 
+        # Get injury status fields
+        status = getattr(yahoo_player, 'status', None)
+        status_full = getattr(yahoo_player, 'status_full', None)
+        injury_note = getattr(yahoo_player, 'injury_note', None)
+
         # Get salary and source using priority strategy
         salary, source = self._get_player_salary_and_source(
             yahoo_player,
@@ -602,7 +607,10 @@ class YahooDataFetcher:
             salary=salary,
             source=source,
             nba_team=nba_team,
-            roster_position=roster_position
+            roster_position=roster_position,
+            status=status,
+            status_full=status_full,
+            injury_note=injury_note
         )
 
 

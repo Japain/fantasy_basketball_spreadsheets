@@ -38,6 +38,9 @@ class Player:
         source: How the player was acquired (determines salary source)
         nba_team: Player's NBA team abbreviation (e.g., 'OKC', 'LAL')
         roster_position: Current roster slot (e.g., 'PG', 'BN', 'IL', 'IL+')
+        status: Injury status code (e.g., 'INJ', 'OUT', 'GTD', 'DTD', None for healthy)
+        status_full: Full injury status description (e.g., 'Injury', 'Out', None)
+        injury_note: Injury details (e.g., 'Day-to-day', 'Knee', None)
     """
     player_key: str
     name: str
@@ -46,6 +49,9 @@ class Player:
     source: SalarySource
     nba_team: Optional[str] = None
     roster_position: Optional[str] = None
+    status: Optional[str] = None
+    status_full: Optional[str] = None
+    injury_note: Optional[str] = None
 
     def __str__(self) -> str:
         """String representation of player."""
@@ -254,7 +260,10 @@ def create_player_from_yahoo_data(
     salary: int,
     source: SalarySource,
     nba_team: Optional[str] = None,
-    roster_position: Optional[str] = None
+    roster_position: Optional[str] = None,
+    status: Optional[str] = None,
+    status_full: Optional[str] = None,
+    injury_note: Optional[str] = None
 ) -> Player:
     """
     Factory function to create a Player from Yahoo API data.
@@ -267,6 +276,9 @@ def create_player_from_yahoo_data(
         source: How the player was acquired
         nba_team: NBA team abbreviation (optional)
         roster_position: Current roster slot (e.g., 'PG', 'BN', 'IL', 'IL+') (optional)
+        status: Injury status code (e.g., 'INJ', 'OUT', 'GTD', 'DTD') (optional)
+        status_full: Full injury status description (e.g., 'Injury', 'Out') (optional)
+        injury_note: Injury details (e.g., 'Day-to-day', 'Knee') (optional)
 
     Returns:
         Player instance
@@ -278,7 +290,10 @@ def create_player_from_yahoo_data(
         salary=salary,
         source=source,
         nba_team=nba_team,
-        roster_position=roster_position
+        roster_position=roster_position,
+        status=status,
+        status_full=status_full,
+        injury_note=injury_note
     )
 
 

@@ -219,6 +219,88 @@ class DiscordNotifier:
             logger.error(f"Failed to send Discord error notification: {e}")
             return False
 
+    def send_bench_alert(
+        self,
+        teams_with_violations: list,
+        spreadsheet_url: str,
+        check_date: str
+    ) -> bool:
+        """
+        Send bench management alert notification.
+
+        Args:
+            teams_with_violations: List of team names with violations
+            spreadsheet_url: URL to the Google Spreadsheet
+            check_date: Date that was checked (YYYY-MM-DD format)
+
+        Returns:
+            True if notification sent successfully, False otherwise
+        """
+        if not self.enabled:
+            return False
+
+        # Don't send notification if no violations
+        if not teams_with_violations:
+            logger.info("No bench violations to report")
+            return False
+
+        try:
+            # Create webhook
+            webhook = DiscordWebhook(
+                url=self.webhook_url,
+                username="Fantasy Basketball Bot"
+            )
+
+            # Create rich embed
+            embed = DiscordEmbed(
+                title="⚠️ Bench Management Alert",
+                description=f"The following teams have healthy players with scheduled games on the bench for {check_date}:",
+                color="ffa500"  # Orange for warning
+            )
+
+            # Format team list
+            team_list = "\n".join([f"• {team}" for team in teams_with_violations])
+
+            embed.add_embed_field(
+                name=f"Teams ({len(teams_with_violations)})",
+                value=team_list,
+                inline=False
+            )
+
+            # Add spreadsheet link only if URL provided
+            if spreadsheet_url:
+                embed.add_embed_field(
+                    name="📊 View Rosters",
+                    value=f"[Open Spreadsheet]({spreadsheet_url})",
+                    inline=False
+                )
+
+            # Add helpful tip
+            embed.add_embed_field(
+                name="💡 Tip",
+                value="Check your bench before games to maximize your active roster!",
+                inline=False
+            )
+
+            # Add footer and timestamp
+            embed.set_footer(text="Fantasy Basketball Automation • Daily Bench Check")
+            embed.set_timestamp()
+
+            # Send webhook
+            webhook.add_embed(embed)
+            response = webhook.execute()
+
+            if response.status_code in [200, 204]:
+                logger.info(f"Bench alert sent successfully ({len(teams_with_violations)} teams)")
+                return True
+            else:
+                logger.warning(f"Bench alert failed with status {response.status_code}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to send bench alert: {e}")
+            return False
+
 
 # Utility functions for easy integration
 def notify_update_complete(
@@ -277,4 +359,28 @@ def notify_error(
         error_type=error_type,
         stack_trace=stack_trace,
         role_id=role_id
+    )
+
+
+def notify_bench_violations(
+    teams_with_violations: list,
+    spreadsheet_url: str,
+    check_date: str
+) -> None:
+    """
+    Convenience function to send bench violation notification.
+
+    Automatically reads webhook URL from environment.
+    Safe to call even if Discord integration is not configured (will no-op).
+
+    Args:
+        teams_with_violations: List of team names with violations
+        spreadsheet_url: URL to the Google Spreadsheet
+        check_date: Date that was checked (YYYY-MM-DD format)
+    """
+    notifier = DiscordNotifier()
+    notifier.send_bench_alert(
+        teams_with_violations=teams_with_violations,
+        spreadsheet_url=spreadsheet_url,
+        check_date=check_date
     )

@@ -532,3 +532,467 @@ If you have any questions or concerns about this implementation plan:
 - Testing strategy
 
 Please let me know before proceeding with implementation!
+
+---
+
+## REVISED PLAN: Option B - Same-Day Analysis (v2.7.1)
+
+### Issue Discovered During Testing
+
+**Timing Problem:**
+The original implementation (v2.7) attempted to check "yesterday's" violations by:
+1. Reading roster positions from the spreadsheet (updated earlier today)
+2. Comparing against current health status from Yahoo
+3. Checking if players had games yesterday
+
+**False Positives:**
+- Spreadsheet captures positions from when it was last updated (e.g., 11 AM today)
+- Managers may have fixed their lineups AFTER yesterday's games but BEFORE today's update
+- We read the "fixed" positions, not the actual game-time positions
+- Example: Player benched during 7 PM game → Manager moves to active at 11 PM → Update at 11 AM captures active position → False negative
+
+**Root Cause:**
+- Yahoo API has no historical roster data
+- Spreadsheet snapshots are not guaranteed to be from game time
+- Cannot reliably reconstruct "what was the lineup during yesterday's games"
+
+### New Approach: Same-Day Analysis (Standalone Mode)
+
+**Concept:**
+Run analysis as a SEPARATE MODE, independent from spreadsheet updates. Schedule LATE AT NIGHT (1-2 AM EST) on the SAME DAY as games, before managers wake up to fix lineups.
+
+**Flow:**
+1. Schedule runs at 1-2 AM EST (after all games complete ~midnight EST)
+2. Run with `--bench-check` flag (standalone mode)
+3. Fetch current league data from Yahoo API
+4. Read current roster positions (reflects game-day state)
+5. Check which benched players had games TODAY
+6. Send Discord alerts immediately
+7. Exit (no spreadsheet updates)
+
+**Separate from Updates:**
+- Bench analysis: Runs at 1-2 AM EST with `--bench-check`
+- Spreadsheet updates: Run whenever needed (e.g., hourly)
+- Independent schedules and purposes
+- Clean separation of concerns
+
+**Why This Works:**
+✅ No spreadsheet dependency - single source of truth (Yahoo)
+✅ No historical data needed - checking same day
+✅ Accurate game-time lineups - captures actual game day decisions
+✅ Catches mistakes before they're fixed - runs before managers wake up
+✅ Simpler logic - one API, one timestamp
+✅ Independent mode - not coupled to spreadsheet updates
+
+---
+
+### TODO: Refactor for Same-Day Analysis
+
+#### **1. Update `src/bench_analyzer.py`**
+
+**Remove:**
+- `batch_read_all_team_rosters()` function (no longer needed)
+- `_parse_roster_rows()` function (no longer needed)
+- `service` parameter from `analyze_bench_violations()`
+- `spreadsheet_id` parameter from `analyze_bench_violations()`
+- All Google Sheets API calls
+
+**Modify:**
+- `analyze_bench_violations()` signature:
+  ```python
+  def analyze_bench_violations(
+      league: League,
+      fetcher: YahooDataFetcher,
+      check_date: Optional[str] = None  # Now defaults to TODAY
+  ) -> Dict[str, List[Dict[str, str]]]:
+  ```
+
+**Logic Changes:**
+- Remove spreadsheet reading logic
+- Use `player.roster_position` directly from current Yahoo data (already in `team.roster`)
+- Change default date from "yesterday" to "today"
+- Simplify violation detection:
+  ```python
+  # OLD: Compare yesterday's spreadsheet position vs today's health
+  yesterday_slot = yesterday_lookup[player.name]['slot']
+  was_benched = yesterday_slot in BENCH_POSITIONS
+
+  # NEW: Use current position from Yahoo
+  is_benched = player.roster_position in BENCH_POSITIONS
+  ```
+
+**Updated Docstring:**
+```python
+"""
+Analyze all teams to find bench management violations.
+
+A violation occurs when:
+1. Player is currently on bench (BN position)
+2. Player is currently healthy (no INJ/OUT/DTD/GTD status)
+3. Player had a scheduled game today
+
+Note: Should be run late at night (1-2 AM EST) after all games complete
+      but before managers wake up to fix lineups.
+
+Args:
+    league: League object with current team/roster data
+    fetcher: YahooDataFetcher for API calls
+    check_date: Date to check (YYYY-MM-DD). If None, uses today's date.
+
+Returns:
+    Dictionary mapping team_name to list of violations
+"""
+```
+
+#### **2. Update `main.py`**
+
+**Add New CLI Argument:**
+```python
+parser.add_argument(
+    '--bench-check',
+    action='store_true',
+    help='Run bench management analysis only (no spreadsheet operations)'
+)
+```
+
+**Add New Mode: BENCH CHECK MODE**
+
+Add this as a new primary mode (alongside CREATE and UPDATE modes):
+
+```python
+# Mode 3: BENCH CHECK mode (standalone bench analysis)
+if args.bench_check:
+    print("\n" + "=" * 80)
+    print("MODE: BENCH MANAGEMENT CHECK")
+    print("=" * 80)
+    print()
+
+    try:
+        from datetime import timedelta
+
+        # Use TODAY's date
+        today = datetime.now(timezone.utc)
+        today_date = today.strftime('%Y-%m-%d')
+
+        print(f"Checking bench violations for: {today_date}")
+        print()
+
+        # Analyze violations
+        violations = analyze_bench_violations(
+            league=league_data,
+            fetcher=fetcher,
+            check_date=today_date
+        )
+
+        # Get team list
+        teams_with_violations = get_teams_with_bench_violations(violations)
+
+        if teams_with_violations:
+            print(f"⚠ Found {len(teams_with_violations)} team(s) with bench violations:")
+            for team_name in teams_with_violations:
+                violation_count = len(violations[team_name])
+                print(f"  • {team_name} ({violation_count} player(s))")
+            print()
+
+            # Send Discord notification (no spreadsheet URL needed)
+            notify_bench_violations(
+                teams_with_violations=teams_with_violations,
+                spreadsheet_url="",  # No spreadsheet in this mode
+                check_date=today_date
+            )
+
+            print("✓ Discord notification sent")
+        else:
+            print("✓ No bench violations found - all teams optimized their lineups!")
+
+        print()
+        print("=" * 80)
+        print("✓ BENCH CHECK COMPLETE")
+        print("=" * 80)
+        print()
+        return 0
+
+    except Exception as e:
+        logger.exception("Bench check failed")
+        print(f"\n✗ Error: Bench check failed: {e}\n")
+        notify_error(
+            error_message=str(e),
+            error_type="Bench Check Failed",
+            stack_trace=traceback.format_exc()
+        )
+        return 1
+```
+
+**Remove Step 2g from UPDATE mode:**
+- Delete the bench analysis code from UPDATE mode entirely
+- Remove `--skip-bench-check` argument (no longer needed)
+
+**Add Validation:**
+```python
+# Validate argument combinations
+if args.bench_check and (args.spreadsheet_url or args.spreadsheet_id or args.create_new):
+    print("✗ Error: --bench-check cannot be combined with spreadsheet arguments")
+    return 1
+
+if args.bench_check and (args.force_full_update):
+    print("✗ Error: --bench-check cannot be combined with --force-full-update")
+    return 1
+```
+
+**Update Discord Message:**
+Modify `send_bench_alert()` to handle optional spreadsheet URL:
+```python
+# Add spreadsheet link only if URL provided
+if spreadsheet_url:
+    embed.add_embed_field(
+        name="📊 View Rosters",
+        value=f"[Open Spreadsheet]({spreadsheet_url})",
+        inline=False
+    )
+```
+
+#### **3. Update `src/discord_notifier.py`**
+
+**Modify `send_bench_alert()` description:**
+```python
+embed = DiscordEmbed(
+    title="⚠️ Bench Management Alert",
+    description=f"The following teams have healthy players with scheduled games on the bench for {check_date}:",
+    color="ffa500"  # Orange for warning
+)
+```
+
+#### **4. Update `tests/test_bench_analyzer.py`**
+
+**Remove:**
+- Tests for `batch_read_all_team_rosters()`
+- Tests for `_parse_roster_rows()`
+- Mock for Google Sheets service
+
+**Update:**
+- `test_violation_analysis()` to not mock spreadsheet reads
+- Use current roster positions directly from test data
+- Change test date references from "yesterday" to "today"
+
+**Simplified test:**
+```python
+def test_violation_analysis():
+    """Test full violation analysis workflow."""
+    # No need to mock spreadsheet - use current roster positions
+    with patch('src.bench_analyzer.check_player_had_game_yesterday') as mock_game_check:
+        mock_game_check.return_value = True
+
+        player = Player(
+            player_key="466.p.1",
+            name="Benched Player",
+            position="PG",
+            salary=50,
+            source=SalarySource.DRAFT,
+            nba_team="OKC",
+            roster_position="BN",  # Currently benched
+            status=None  # Currently healthy
+        )
+
+        team = Team(
+            team_id="1",
+            team_key="466.l.1.t.1",
+            team_name="Test Team",
+            manager_name="Manager",
+            roster=[player],
+            total_salary=50,
+            faab_remaining=100
+        )
+
+        league = League(
+            league_id="1",
+            league_key="466.l.1",
+            league_name="Test League",
+            season="2024",
+            num_teams=1,
+            teams=[team]
+        )
+
+        # Run analysis - no service or spreadsheet_id needed
+        violations = analyze_bench_violations(
+            league=league,
+            fetcher=Mock(),
+            check_date="2026-01-24"  # TODAY
+        )
+
+        assert "Test Team" in violations
+        assert len(violations["Test Team"]) == 1
+```
+
+#### **5. Update `debug_bench_violations.py`**
+
+**Remove:**
+- Google Sheets service calls
+- Spreadsheet reading logic
+- `batch_read_all_team_rosters()` calls
+
+**Simplify to use current Yahoo data:**
+```python
+# Step 2: Analyze each team (using current Yahoo positions)
+for team in league_data.teams:
+    for player in team.roster:
+        # Check current position (not spreadsheet)
+        is_benched = player.roster_position in BENCH_POSITIONS
+        is_on_il = player.roster_position in IL_POSITIONS
+        is_healthy = _is_player_healthy(player)
+        had_game = check_player_had_game_yesterday(fetcher, player.player_key, check_date)
+
+        # Violation if: benched + not IL + healthy + had game
+        if is_benched and not is_on_il and is_healthy and had_game:
+            # Report violation
+```
+
+#### **6. Update `CLAUDE.md`**
+
+**Replace "Bench Management Alerts (v2.7)" section with v2.7.1:**
+
+```markdown
+### Bench Management Alerts (v2.7.1)
+
+The application includes optional bench management analysis for same-day lineup optimization alerts.
+
+**Features:**
+- 🔍 **Same-day analysis** - Checks current lineups for today's games
+- ⚠️ **Violation detection** - Identifies teams with benched healthy players
+- 🔔 **Discord alerts** - Immediate notifications via webhook
+- 📊 **Single source of truth** - Uses Yahoo API only (no spreadsheet)
+- ⚡ **Non-critical** - Analysis failures don't break main workflow
+
+**How It Works:**
+1. Run late at night (1-2 AM EST) after games complete
+2. Fetch current roster positions from Yahoo API
+3. Check current player health status from Yahoo API
+4. Verify which players had games TODAY
+5. Identify violations: benched + healthy + had game
+6. Send Discord notification immediately
+
+**Usage:**
+```bash
+# Bench check only (no spreadsheet operations)
+uv run python main.py --bench-check
+
+# Regular spreadsheet update (no bench check)
+uv run python main.py --spreadsheet-id "YOUR_ID"
+
+# Create new spreadsheet (no bench check)
+uv run python main.py
+```
+
+**Scheduling:**
+- **Bench Check**: Run at 1-2 AM EST via cron/GitHub Actions with `--bench-check`
+- **Timing**: After all NBA games complete (~midnight EST)
+- **Before**: Managers wake up to fix lineups (~6-7 AM EST)
+- **Spreadsheet Updates**: Run separately at any time (e.g., hourly)
+
+**Configuration:**
+- **Standalone mode**: Use `--bench-check` flag
+- **Discord**: Uses same webhook as update notifications
+- **No spreadsheet required**: Can run without any spreadsheet arguments
+
+**Criteria for Violation:**
+A team is flagged when a player meets ALL these conditions:
+1. Is currently in BN (bench) position
+2. Is NOT in IL/IL+ position
+3. Is currently healthy (no INJ/OUT/DTD/GTD status)
+4. Had a scheduled game TODAY
+
+**Example Output:**
+```
+Step 2g: Analyzing bench management...
+⚠ Found 3 team(s) with bench violations for 2026-01-24:
+  • Team Alpha (2 player(s))
+  • Team Beta (1 player(s))
+  • Team Gamma (1 player(s))
+```
+
+**Performance:**
+- Google Sheets: **0 read calls** (no spreadsheet needed)
+- Yahoo API: ~10-30 calls (one per benched player)
+- Total: **~10-30 API calls per run**
+- Non-blocking: Runs after league data fetch
+
+**Advantages over v2.7:**
+- ✅ **No timing issues** - checks same-day, not historical
+- ✅ **No false positives** - uses real game-time positions
+- ✅ **Simpler** - single source of truth (Yahoo API)
+- ✅ **More accurate** - catches violations before managers fix them
+```
+
+---
+
+### Implementation Checklist
+
+- [x] Refactor `src/bench_analyzer.py` to remove spreadsheet dependency
+- [x] Update `analyze_bench_violations()` to use current positions
+- [x] Change default date from yesterday to today
+- [x] Add `--bench-check` CLI argument to `main.py`
+- [x] Add BENCH CHECK mode to `main.py` (new standalone mode)
+- [x] Remove Step 2g from UPDATE mode in `main.py`
+- [x] Remove `--skip-bench-check` argument (no longer needed)
+- [x] Add validation to prevent combining `--bench-check` with spreadsheet args
+- [x] Update `send_bench_alert()` to handle optional spreadsheet URL
+- [x] Simplify `tests/test_bench_analyzer.py`
+- [x] Simplify `debug_bench_violations.py`
+- [x] Update `CLAUDE.md` documentation to v2.7.1
+- [x] Test standalone bench check mode with real data (manual testing required)
+- [x] Add GitHub Actions workflow for 1-2 AM EST bench checks (future)
+- [x] Keep separate schedule for spreadsheet updates (future)
+
+---
+
+### Testing Strategy
+
+**Unit Tests:**
+- Run simplified tests without spreadsheet mocks
+- Verify current position detection works correctly
+
+**Debug Script:**
+- Test `debug_bench_violations.py` with current data
+- Verify violations detected match expectations
+- No spreadsheet dependency needed
+
+**Integration Test:**
+- Run `uv run python main.py --bench-check` at ~1 AM EST after real games complete
+- Verify positions reflect actual game-day decisions
+- Confirm Discord alerts sent correctly
+- Re-run at ~8 AM EST and verify fewer/no violations (managers fixed lineups)
+- Verify `--bench-check` cannot be combined with spreadsheet arguments
+- Test that spreadsheet updates still work independently
+
+**Validation:**
+- Compare violations found vs actual Yahoo rosters during games
+- Manually verify benched players actually had games
+- Confirm no false positives from timing issues
+
+---
+
+## Future Enhancement: Proactive Alerts (Option A)
+
+**Current Limitation (v2.7.1 - Option B):**
+The current implementation detects violations **after games complete** by checking if players recorded non-zero stats. This means:
+- ❌ Cannot alert managers before games to fix lineups
+- ❌ Only useful for post-game analysis
+- ❌ Managers can't take action to prevent violations
+
+**Future Goal (Option A - Proactive Alerts):**
+Switch to NBA team schedule API to detect violations **before/during games**:
+- ✅ Alert managers 2-6 hours before game time
+- ✅ Managers can fix lineups in time
+- ✅ Real-time violation detection
+- ✅ More valuable for league competitiveness
+
+**Investigation Required:**
+See `TODO_PROACTIVE_BENCH_ALERTS.md` for:
+- Potential NBA schedule data sources (NBA API, ESPN API, SportsData.io)
+- Implementation plan and timeline
+- Code changes needed
+- Cost considerations
+
+**Priority:** Medium (valuable enhancement but not critical)
+
+**Next Step:** Investigate NBA Official API and ESPN API reliability
+
