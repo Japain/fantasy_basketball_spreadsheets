@@ -4,7 +4,7 @@ on:
   schedule:
     # Runs at 6:00 AM UTC daily (1:00 AM EST, 10:00 PM PST previous day)
     # This is after most NBA games complete (~midnight EST) but before managers wake up
-    - cron: '0 6 * * *'
+    - cron: '0 5 * * *'
   workflow_dispatch: # Allow manual trigger from GitHub Actions UI
 
 jobs:
