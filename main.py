@@ -9,6 +9,7 @@ and generates a formatted Google Sheets report with team rosters and salaries.
 import argparse
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from config import Config
 from src.logger import get_logger
@@ -261,11 +262,14 @@ def main():
         print()
 
         try:
-            # Use TODAY's date
-            today = datetime.now(timezone.utc)
+            # Use TODAY's date in Pacific timezone (PST/PDT)
+            # This avoids date rollover issues when running late at night after games finish
+            # (e.g., 1 AM EST = 10 PM PST, still same game day)
+            pacific_tz = ZoneInfo("America/Los_Angeles")
+            today = datetime.now(pacific_tz)
             today_date = today.strftime('%Y-%m-%d')
 
-            print(f"Checking bench violations for: {today_date}")
+            print(f"Checking bench violations for: {today_date} (Pacific Time)")
             print()
 
             # Analyze violations

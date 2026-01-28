@@ -344,9 +344,19 @@ The application includes optional bench management analysis for same-day lineup 
 1. Run late at night (1-2 AM EST) after games complete
 2. Fetch current roster positions from Yahoo API
 3. Check current player health status from Yahoo API
-4. Verify which players had games TODAY
+4. Verify which players had games TODAY (based on Pacific Time)
 5. Identify violations: benched + healthy + had game
 6. Send Discord notification immediately
+
+**Timezone Behavior:**
+- **Uses Pacific Time (PST/PDT)** to determine "today's date"
+- **Why Pacific?** Avoids date rollover issues when running late at night
+  - Running at 1 AM EST = 10 PM PST (still same game day ✅)
+  - Running at 2 AM EST = 11 PM PST (still same game day ✅)
+  - Safe window until 3 AM EST (midnight PST)
+- **Old behavior (UTC):** Would incorrectly roll over at midnight EST
+  - Example: 12:11 AM EST on Jan 28 = 5:11 AM UTC on Jan 28
+  - Would check Jan 28 games when games were actually played on Jan 27 ❌
 
 **Usage:**
 ```bash
@@ -363,6 +373,7 @@ uv run python main.py
 **Scheduling:**
 - **Bench Check**: Run at 1-2 AM EST via cron/GitHub Actions with `--bench-check`
 - **Timing**: After all NBA games complete (~midnight EST)
+- **Safe Window**: Pacific timezone ensures correct date until 3 AM EST
 - **Before**: Managers wake up to fix lineups (~6-7 AM EST)
 - **Spreadsheet Updates**: Run separately at any time (e.g., hourly)
 
@@ -449,12 +460,37 @@ The v2.8 update replaces the retroactive stats-based checking with a proactive s
 
 **Testing:** Created `tests/test_team_abbreviation_mapping.py` with 10 comprehensive tests (all passing)
 
+#### Bug Fix (v2.8.2) - Timezone Date Determination
+
+**Issue Found (2026-01-28):** Using UTC timezone caused incorrect date determination when running late at night after games complete.
+
+**Problem:**
+- Script used UTC to determine "today's date"
+- Running at 12:11 AM EST on Jan 28 = 5:11 AM UTC on Jan 28
+- Would check for Jan 28 games when games were actually played on Jan 27 ❌
+
+**Solution:**
+- Changed to **Pacific Time (PST/PDT)** for date determination
+- Running at 12:11 AM EST on Jan 28 = 9:11 PM PST on Jan 27 ✅
+- Correctly checks Jan 27 games
+
+**Why Pacific Time?**
+- **Safe window:** Even at 2 AM EST (after all games), it's still 11 PM PST (same day)
+- **No rollover risk:** Pacific doesn't roll over until 3 AM EST (midnight PST)
+- **Matches NBA context:** Pacific is where the league is based
+
+**Files Modified:**
+- `main.py` - Updated bench check to use Pacific timezone
+- `src/bench_analyzer.py` - Updated default date calculation to use Pacific timezone
+
 **How It Works:**
 1. Fetches NBA game schedules from ESPN API (free, no authentication)
-2. Checks if benched player's team has a game scheduled TODAY
+2. Checks if benched player's team has a game scheduled TODAY (Pacific Time)
 3. Caches schedule data (1-hour TTL) to minimize API calls
 4. Falls back to NBA Official API if ESPN fails
 5. Sends Discord alerts immediately when violations detected
+
+**Note:** Uses Pacific Time (PST/PDT) to determine "today" - see v2.7.1 Timezone Behavior for details.
 
 **Benefits over v2.7.1:**
 - ✅ **Proactive alerts** - Can send alerts 2-6 hours before games (Phase 3)

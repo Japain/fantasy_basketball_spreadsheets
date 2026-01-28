@@ -26,6 +26,7 @@ LEGACY IMPLEMENTATION (v2.7.1 - Option B):
 
 from typing import List, Optional, Dict
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from src.logger import get_logger
 from src.data_models import League, Player
@@ -350,9 +351,12 @@ def analyze_bench_violations(
     """
     logger.info("Starting bench management violation analysis...")
 
-    # Use today's date if not provided
+    # Use today's date if not provided (Pacific timezone to avoid rollover issues)
+    # Running late at night after games finish (e.g., 1 AM EST = 10 PM PST)
+    # ensures we check the correct game day
     if not check_date:
-        today = datetime.now(timezone.utc)
+        pacific_tz = ZoneInfo("America/Los_Angeles")
+        today = datetime.now(pacific_tz)
         check_date = today.strftime('%Y-%m-%d')
 
     logger.info(f"Analyzing for date: {check_date}")
