@@ -529,6 +529,106 @@ uv run python main.py --bench-check
 - Game-time filtering (alert only for upcoming games, not completed)
 - Configurable alert timing (X hours before game start)
 
+### IL/IL+ Violation Detection (v2.9) - NEW
+
+The application now detects healthy players incorrectly placed in IL/IL+ slots and includes player details in Discord notifications.
+
+**Feature:** Roster management alerts for injured list violations
+
+**Overview:**
+Extends bench management to detect healthy players in IL/IL+ positions who should be activated. This helps ensure league competitiveness by alerting managers when they have healthy players wasting injured list spots.
+
+**Key Features:**
+- 🏥 **IL/IL+ detection** - Identifies healthy players in injured list slots
+- 📋 **Player details** - Discord notifications include player names, NBA teams, positions, and slots
+- 🔔 **Combined alerts** - Single Discord message for both bench and IL violations
+- ⚡ **Zero overhead** - No additional API calls (no game schedule check required)
+- ✅ **Production ready** - Comprehensive test coverage (30+ tests)
+
+**How It Works:**
+1. Analyze all teams after league data fetch
+2. For each player on team roster:
+   - Check if player is in IL or IL+ position
+   - Check if player is currently healthy (no injury status)
+3. Flag violations when healthy players occupy IL/IL+ slots
+4. Send combined Discord alert with bench and IL violations
+
+**Violation Criteria:**
+A team is flagged when:
+1. Player is in IL or IL+ roster slot
+2. Player is currently healthy (no INJ/OUT/DTD/GTD status)
+
+**Discord Notification Format:**
+```
+⚠️ Roster Management Alert
+
+🏀 Bench Violations
+• Team Alpha
+• Team Beta
+
+🏥 IL/IL+ Violations
+• **Team Gamma**
+  - LeBron James (LAL - SF,PF) [IL+]
+  - Stephen Curry (GSW - PG,SG) [IL]
+
+• **Lakers Fan Club**
+  - Anthony Davis (LAL - PF,C) [IL]
+
+💡 Tip
+Bench: Move healthy benched players to active roster
+IL: Activate healthy players from IL/IL+ slots
+```
+
+**Example Output:**
+```bash
+$ uv run python main.py --bench-check
+
+MODE: BENCH MANAGEMENT CHECK
+================================================================================
+
+Checking violations for: 2026-01-31
+
+⚠ Found 4 team(s) with violations:
+
+  Bench Violations (1 team(s)):
+    • JD&TheStraightShot (1 player(s))
+
+  IL/IL+ Violations (3 team(s)):
+    • To the Victor go the Spoils (1 player(s))
+    • The Best Ever (1 player(s))
+    • Hooked on Phonics (3 player(s))
+
+✓ Discord notification sent
+```
+
+**Performance:**
+- **API Calls**: Zero additional API calls
+- **Processing Time**: ~1-5ms per team (simple roster iteration)
+- **Memory**: Minimal (one additional dict)
+- **Network**: Zero additional network requests
+
+**Implementation Details:**
+- **Module**: `src/bench_analyzer.py`
+  - `_is_on_il_or_il_plus()` - Helper function for IL position detection
+  - `analyze_il_violations()` - Main analysis function
+- **Modified**: `src/discord_notifier.py`
+  - `send_bench_alert()` - Updated to include IL violation details
+  - `notify_bench_violations()` - Accepts both violation types
+- **Modified**: `main.py`
+  - Calls both bench and IL analysis in `--bench-check` mode
+- **Tests**: `tests/test_bench_analyzer.py` - Unit tests for IL detection
+- **Integration**: `tests/test_il_feature_integration.py` - End-to-end test
+
+**Documentation:**
+For complete implementation details, see [context/IL-IMPLEMENTATION-SUMMARY.md](context/IL-IMPLEMENTATION-SUMMARY.md)
+
+**Usage:**
+Same as bench check - no changes to command-line interface:
+```bash
+# Bench check now includes IL violations
+uv run python main.py --bench-check
+```
+
 ### Rate Limit Optimization (v2.4 + v2.5) ✅ Production Ready
 
 The application includes comprehensive rate limit handling to work within Google Sheets API quotas.

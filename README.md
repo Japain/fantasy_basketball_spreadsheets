@@ -38,6 +38,11 @@ A Python application that extracts fantasy basketball league data from Yahoo Fan
   - Optimal lineup logic (no false positives)
   - Discord alerts for competitive league management
   - Team abbreviation mapping for accurate game detection (v2.8.1)
+- 🏥 **IL/IL+ Violation Detection** - Roster management alerts (v2.9)
+  - Detects healthy players incorrectly placed in IL/IL+ slots
+  - Discord notifications include player names and details
+  - Combined alerts with bench violations
+  - Zero API overhead (no game schedule check required)
 
 ## How It Works
 
@@ -201,7 +206,7 @@ uv run python main.py --bench-check --verbose
 
 **What It Checks:**
 
-A violation is flagged when a team has:
+**Bench Violations** - A violation is flagged when a team has:
 1. A player on the bench (BN position)
 2. Player is healthy (no INJ/OUT/DTD/GTD status)
 3. Player is NOT on IL/IL+ (injured list)
@@ -209,6 +214,10 @@ A violation is flagged when a team has:
 5. Team has active roster spots that could be better utilized:
    - Empty active spots (< 10 active players), OR
    - Active players whose teams DON'T have games today
+
+**IL/IL+ Violations** (v2.9) - A violation is flagged when:
+1. Player is in IL or IL+ roster slot
+2. Player is currently healthy (no injury status)
 
 **Optimal Lineup Logic:**
 
@@ -221,11 +230,17 @@ If all 10 active roster spots are filled with players who have games today, benc
 MODE: BENCH MANAGEMENT CHECK
 ================================================================================
 
-Checking bench violations for: 2026-01-24
+Checking violations for: 2026-01-31
 
-⚠ Found 2 team(s) with bench violations:
-  • Huskies (2 player(s))
-  • Team Rockets (1 player(s))
+⚠ Found 4 team(s) with violations:
+
+  Bench Violations (1 team(s)):
+    • Huskies (2 player(s))
+
+  IL/IL+ Violations (3 team(s)):
+    • Team Rockets (1 player(s))
+    • Lakers Fan Club (2 player(s))
+    • Warriors Squad (1 player(s))
 
 ✓ Discord notification sent
 
@@ -244,10 +259,12 @@ Checking bench violations for: 2026-01-24
 **Discord Integration:**
 
 When configured with `DISCORD_WEBHOOK_URL`, violations are automatically sent to your Discord channel with:
-- List of teams with violations
-- Number of benched players per team
+- List of teams with bench violations (team names only)
+- List of teams with IL/IL+ violations (includes player names, NBA teams, positions, and slots)
+- Combined roster management alert
 - Direct link to your league spreadsheet (if available)
 - Date of analysis
+- Actionable tips for both violation types
 
 **Note:** This is a standalone check - it does NOT create or update spreadsheets. To update your spreadsheet, use the regular update mode (see above).
 
@@ -411,9 +428,13 @@ uv run python -m tests.test_edge_cases               # Edge cases (6 tests)
 uv run python -c "import sys; sys.path.insert(0, '.'); from tests.test_bench_analyzer_proactive import main; main()"  # Bench analyzer (8 tests)
 uv run python -c "import sys; sys.path.insert(0, '.'); from tests.test_nba_schedule_fetcher import main; main()"      # NBA schedule fetcher (8 tests)
 uv run python -c "import sys; sys.path.insert(0, '.'); from tests.test_team_abbreviation_mapping import main; main()" # Team mapping (10 tests)
+
+# IL violation tests (v2.9)
+uv run python -m tests.test_bench_analyzer              # Includes IL violation tests (27 tests)
+uv run python -m tests.test_il_feature_integration      # IL feature integration (3 tests)
 ```
 
-**Test Coverage:** 51+ automated tests covering all features including bench management
+**Test Coverage:** 57+ automated tests covering all features including bench management and IL violation detection
 
 ### Dependencies
 
@@ -460,6 +481,8 @@ uv run python -m src.auth.google_auth_manual
 
 ### Planning Documents
 - **context/INCREMENTAL_UPDATE_PLAN.md** - Incremental update feature implementation plan (v2.0)
+- **context/IL-PLAN.md** - IL/IL+ violation detection implementation plan (v2.9)
+- **context/IL-IMPLEMENTATION-SUMMARY.md** - IL violation feature summary and documentation (v2.9)
 - **context/PLAN.md** - Original implementation plan (v1.0)
 
 ### Historical Documentation (Archived)
@@ -478,9 +501,15 @@ uv run python -m src.auth.google_auth_manual
 
 ---
 
-**Status**: ✅ Production-ready with bench management analysis (v2.8.1)
+**Status**: ✅ Production-ready with roster management alerts (v2.9)
 
 **Recent Updates:**
+- **v2.9** - IL/IL+ violation detection (NEW FEATURE)
+  - Detects healthy players incorrectly placed in IL/IL+ slots
+  - Discord notifications include player names, NBA teams, positions, and slots
+  - Combined roster management alerts (bench + IL violations)
+  - Zero API overhead (no game schedule check required)
+  - Comprehensive test coverage (30+ tests including integration tests)
 - **v2.8.1** - Team abbreviation mapping fix for bench management
   - Fixed: Washington, New York, Golden State, Utah, San Antonio, New Orleans violations now detected
   - Added: ESPN-to-Yahoo team abbreviation normalization
