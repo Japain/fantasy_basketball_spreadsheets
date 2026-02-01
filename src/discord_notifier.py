@@ -285,7 +285,7 @@ class DiscordNotifier:
                 for team_name, team_violations in il_violations.items():
                     il_list_parts.append(f"• **{team_name}**")
                     for player in team_violations:
-                        player_info = f"  - {player['player_name']} ({player['nba_team']} - {player['position']}) [{player['roster_slot']}]"
+                        player_info = f"  • {player['player_name']} ({player['nba_team']} - {player['position']}) [{player['roster_slot']}]"
                         il_list_parts.append(player_info)
                 il_list = "\n".join(il_list_parts)
             else:
