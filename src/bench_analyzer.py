@@ -112,6 +112,21 @@ def _is_on_il(player: Player) -> bool:
     return player.roster_position in IL_POSITIONS
 
 
+def _is_on_il_or_il_plus(player: Player) -> bool:
+    """
+    Check if player is on IL or IL+ (either injured list slot).
+
+    Args:
+        player: Player object to check
+
+    Returns:
+        True if player is in IL or IL+ position, False otherwise
+    """
+    if not player.roster_position:
+        return False
+    return player.roster_position in IL_POSITIONS  # {'IL', 'IL+'}
+
+
 def _count_active_spots_without_games(roster: List[Player], check_date: str) -> int:
     """
     Count the number of active roster spots that DON'T have games scheduled today.
@@ -441,6 +456,64 @@ def analyze_bench_violations(
     )
 
     return violations_by_team
+
+
+def analyze_il_violations(
+    league: League,
+    fetcher: YahooDataFetcher,
+) -> Dict[str, List[Dict[str, str]]]:
+    """
+    Analyze teams for healthy players in IL/IL+ slots.
+
+    A violation occurs when:
+    1. Player is in IL or IL+ position
+    2. Player is currently healthy (no injury status)
+
+    Args:
+        league: League object containing teams and rosters
+        fetcher: YahooDataFetcher instance (kept for consistency, not used)
+
+    Returns:
+        Dictionary mapping team names to lists of violating players:
+        {
+            "Team Name": [
+                {
+                    'player_name': 'Player Name',
+                    'nba_team': 'LAL',
+                    'position': 'PG,SG',
+                    'roster_slot': 'IL+'
+                },
+                ...
+            ],
+            ...
+        }
+    """
+    violations = {}
+
+    for team in league.teams:
+        team_violations = []
+
+        for player in team.roster:
+            # Condition 1: Is player on IL or IL+?
+            if not _is_on_il_or_il_plus(player):
+                continue  # Not on IL, skip
+
+            # Condition 2: Is player healthy?
+            if not _is_player_healthy(player):
+                continue  # Player is injured, no violation
+
+            # VIOLATION FOUND: Healthy player in IL/IL+ slot
+            team_violations.append({
+                'player_name': player.name,
+                'nba_team': player.nba_team or 'N/A',
+                'position': player.position or 'N/A',
+                'roster_slot': player.roster_position or 'N/A'
+            })
+
+        if team_violations:
+            violations[team.team_name] = team_violations
+
+    return violations
 
 
 def get_teams_with_bench_violations(

@@ -9,7 +9,7 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 import os
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -221,17 +221,22 @@ class DiscordNotifier:
 
     def send_bench_alert(
         self,
-        teams_with_violations: list,
+        bench_teams: list,
+        il_violations: Dict[str, List[Dict[str, str]]],
         spreadsheet_url: str,
         check_date: str
     ) -> bool:
         """
-        Send bench management alert notification.
+        Send bench management alert via Discord webhook.
+
+        Shows both bench violations (healthy players on bench with games)
+        and IL violations (healthy players in IL/IL+ slots) in a single alert.
 
         Args:
-            teams_with_violations: List of team names with violations
-            spreadsheet_url: URL to the Google Spreadsheet
-            check_date: Date that was checked (YYYY-MM-DD format)
+            bench_teams: List of team names with bench violations
+            il_violations: Dict mapping team names to IL violation details (includes player names)
+            spreadsheet_url: URL to the league spreadsheet
+            check_date: Date string for the violations (YYYY-MM-DD)
 
         Returns:
             True if notification sent successfully, False otherwise
@@ -239,9 +244,11 @@ class DiscordNotifier:
         if not self.enabled:
             return False
 
-        # Don't send notification if no violations
-        if not teams_with_violations:
-            logger.info("No bench violations to report")
+        # Count total violations
+        total_violations = len(bench_teams) + len(il_violations)
+
+        if total_violations == 0:
+            logger.info("No bench or IL violations to report")
             return False
 
         try:
@@ -251,23 +258,58 @@ class DiscordNotifier:
                 username="Fantasy Basketball Bot"
             )
 
-            # Create rich embed
+            # Build title
+            title = "⚠️ Roster Management Alert"
+
+            # Build description
+            description_parts = []
+            if bench_teams:
+                description_parts.append(
+                    f"**{len(bench_teams)} team(s) with bench violations**\n"
+                    "Healthy players on bench who have games today"
+                )
+            if il_violations:
+                description_parts.append(
+                    f"**{len(il_violations)} team(s) with IL violations**\n"
+                    "Healthy players in IL/IL+ slots"
+                )
+
+            description = "\n\n".join(description_parts)
+
+            # Build team lists
+            bench_list = "\n".join(f"• {team}" for team in bench_teams) if bench_teams else "None"
+
+            # Build IL list with player details
+            if il_violations:
+                il_list_parts = []
+                for team_name, team_violations in il_violations.items():
+                    il_list_parts.append(f"• **{team_name}**")
+                    for player in team_violations:
+                        player_info = f"  - {player['player_name']} ({player['nba_team']} - {player['position']}) [{player['roster_slot']}]"
+                        il_list_parts.append(player_info)
+                il_list = "\n".join(il_list_parts)
+            else:
+                il_list = "None"
+
+            # Create embed
             embed = DiscordEmbed(
-                title="⚠️ Bench Management Alert",
-                description=f"The following teams have healthy players with scheduled games on the bench for {check_date}:",
-                color="ffa500"  # Orange for warning
+                title=title,
+                description=description,
+                color="ffa500"  # Orange
             )
 
-            # Format team list
-            team_list = "\n".join([f"• {team}" for team in teams_with_violations])
-
             embed.add_embed_field(
-                name=f"Teams ({len(teams_with_violations)})",
-                value=team_list,
+                name="🏀 Bench Violations",
+                value=bench_list,
                 inline=False
             )
 
-            # Add spreadsheet link only if URL provided
+            embed.add_embed_field(
+                name="🏥 IL/IL+ Violations",
+                value=il_list,
+                inline=False
+            )
+
             if spreadsheet_url:
                 embed.add_embed_field(
                     name="📊 View Rosters",
@@ -275,15 +317,17 @@ class DiscordNotifier:
                     inline=False
                 )
 
-            # Add helpful tip
             embed.add_embed_field(
                 name="💡 Tip",
-                value="Check your bench before games to maximize your active roster!",
+                value=(
+                    "**Bench**: Move healthy benched players to active roster\n"
+                    "**IL**: Activate healthy players from IL/IL+ slots"
+                ),
                 inline=False
             )
 
             # Add footer and timestamp
-            embed.set_footer(text="Fantasy Basketball Automation • Daily Bench Check")
+            embed.set_footer(text=f"Check date: {check_date}")
             embed.set_timestamp()
 
             # Send webhook
@@ -291,14 +335,14 @@ class DiscordNotifier:
             response = webhook.execute()
 
             if response.status_code in [200, 204]:
-                logger.info(f"Bench alert sent successfully ({len(teams_with_violations)} teams)")
+                logger.info(f"Roster management alert sent successfully ({total_violations} teams)")
                 return True
             else:
-                logger.warning(f"Bench alert failed with status {response.status_code}")
+                logger.warning(f"Roster management alert failed with status {response.status_code}")
                 return False
 
         except Exception as e:
-            logger.error(f"Failed to send bench alert: {e}")
+            logger.error(f"Failed to send roster management alert: {e}")
             return False
 
 
@@ -363,24 +407,38 @@ def notify_error(
 
 
 def notify_bench_violations(
-    teams_with_violations: list,
-    spreadsheet_url: str,
-    check_date: str
-) -> None:
+    bench_violations: Dict[str, List[Dict[str, str]]],
+    il_violations: Dict[str, List[Dict[str, str]]],
+    spreadsheet_url: str = "",
+    check_date: str = ""
+) -> bool:
     """
-    Convenience function to send bench violation notification.
-
-    Automatically reads webhook URL from environment.
-    Safe to call even if Discord integration is not configured (will no-op).
+    Convenience function to send bench and IL violation notifications.
 
     Args:
-        teams_with_violations: List of team names with violations
-        spreadsheet_url: URL to the Google Spreadsheet
-        check_date: Date that was checked (YYYY-MM-DD format)
+        bench_violations: Dict mapping team names to bench violation details
+        il_violations: Dict mapping team names to IL violation details
+        spreadsheet_url: Optional URL to the league spreadsheet
+        check_date: Optional date string for the violations
+
+    Returns:
+        True if notification sent, False if Discord disabled or no violations
     """
-    notifier = DiscordNotifier()
-    notifier.send_bench_alert(
-        teams_with_violations=teams_with_violations,
+    webhook_url = os.getenv('DISCORD_WEBHOOK_URL', '').strip()
+
+    if not webhook_url:
+        logger.info("Discord notifications disabled (no webhook URL)")
+        return False
+
+    # Convert bench violations to team list
+    from src.bench_analyzer import get_teams_with_bench_violations
+    bench_teams = get_teams_with_bench_violations(bench_violations)
+
+    # Send combined alert (pass full IL violations dict for player details)
+    notifier = DiscordNotifier(webhook_url)
+    return notifier.send_bench_alert(
+        bench_teams=bench_teams,
+        il_violations=il_violations,
         spreadsheet_url=spreadsheet_url,
         check_date=check_date
     )

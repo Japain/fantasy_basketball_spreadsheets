@@ -15,8 +15,10 @@ from src.bench_analyzer import (
     _is_player_healthy,
     _is_benched,
     _is_on_il,
-    check_player_had_game_today,
+    _is_on_il_or_il_plus,
+    check_player_had_game_today_legacy,
     analyze_bench_violations,
+    analyze_il_violations,
     get_teams_with_bench_violations,
 )
 from src.data_models import Player, Team, League, SalarySource
@@ -191,9 +193,9 @@ def test_il_detection():
 
 
 def test_game_checking():
-    """Test game schedule checking."""
+    """Test game schedule checking (legacy stats-based approach)."""
     print("\n" + "=" * 80)
-    print("TEST: Game Schedule Checking")
+    print("TEST: Game Schedule Checking (Legacy)")
     print("=" * 80)
 
     # Test 1: Player had game (non-zero stats)
@@ -207,13 +209,13 @@ def test_game_checking():
     mock_player_data.player_stats = mock_stats
     mock_fetcher.yahoo_query.get_player_stats_by_date.return_value = mock_player_data
 
-    result = check_player_had_game_today(mock_fetcher, "466.p.1", "2026-01-24")
+    result = check_player_had_game_today_legacy(mock_fetcher, "466.p.1", "2026-01-24")
     assert result is True, "Player with non-zero stats should have had a game"
     print("✓ Test 1: Player with non-zero stats had a game")
 
     # Test 2: Player no game (empty stats)
     mock_stats.stats = []
-    result = check_player_had_game_today(mock_fetcher, "466.p.1", "2026-01-24")
+    result = check_player_had_game_today_legacy(mock_fetcher, "466.p.1", "2026-01-24")
     assert result is False, "Player with empty stats should not have had a game"
     print("✓ Test 2: Player with empty stats had no game")
 
@@ -222,13 +224,13 @@ def test_game_checking():
     mock_stat_zero.stat = Mock()
     mock_stat_zero.stat.value = 0.0  # Zero value (no game)
     mock_stats.stats = [mock_stat_zero, mock_stat_zero]
-    result = check_player_had_game_today(mock_fetcher, "466.p.1", "2026-01-24")
+    result = check_player_had_game_today_legacy(mock_fetcher, "466.p.1", "2026-01-24")
     assert result is False, "Player with all zero stats should not have had a game"
     print("✓ Test 3: Player with all zero stats had no game")
 
     # Test 4: API failure gracefully returns False
     mock_fetcher.yahoo_query.get_player_stats_by_date.side_effect = Exception("API Error")
-    result = check_player_had_game_today(mock_fetcher, "466.p.1", "2026-01-24")
+    result = check_player_had_game_today_legacy(mock_fetcher, "466.p.1", "2026-01-24")
     assert result is False, "API failure should gracefully return False"
     print("✓ Test 4: API failure gracefully returns False")
 
@@ -240,7 +242,7 @@ def test_violation_analysis():
     print("=" * 80)
 
     # Test 1: Violation detected when all conditions met
-    with patch('src.bench_analyzer.check_player_had_game_today') as mock_game_check:
+    with patch('src.bench_analyzer.check_player_has_game_scheduled') as mock_game_check:
         mock_game_check.return_value = True
 
         player = Player(
@@ -286,7 +288,7 @@ def test_violation_analysis():
         print("✓ Test 1: Violation detected when all conditions met")
 
     # Test 2: No violation when player injured
-    with patch('src.bench_analyzer.check_player_had_game_today') as mock_game_check:
+    with patch('src.bench_analyzer.check_player_has_game_scheduled') as mock_game_check:
         mock_game_check.return_value = True
 
         player = Player(
@@ -335,6 +337,185 @@ def test_get_teams_with_violations():
     print("✓ Test 2: Empty violations returns empty list")
 
 
+def test_is_on_il_or_il_plus():
+    """Test IL/IL+ position detection."""
+    print("\n" + "=" * 80)
+    print("TEST: IL/IL+ Position Detection (New Helper)")
+    print("=" * 80)
+
+    # Test 1: Player on IL
+    player_il = Player(
+        player_key="466.p.1",
+        name="Test Player",
+        position="PG",
+        salary=10,
+        source=SalarySource.DRAFT,
+        roster_position="IL"
+    )
+    assert _is_on_il_or_il_plus(player_il) is True, "Player in IL position should be detected"
+    print("✓ Test 1: Player in IL position detected")
+
+    # Test 2: Player on IL+
+    player_il_plus = Player(
+        player_key="466.p.2",
+        name="Test Player 2",
+        position="SG",
+        salary=15,
+        source=SalarySource.DRAFT,
+        roster_position="IL+"
+    )
+    assert _is_on_il_or_il_plus(player_il_plus) is True, "Player in IL+ position should be detected"
+    print("✓ Test 2: Player in IL+ position detected")
+
+    # Test 3: Player on bench (not IL)
+    player_bench = Player(
+        player_key="466.p.3",
+        name="Test Player 3",
+        position="SF",
+        salary=20,
+        source=SalarySource.DRAFT,
+        roster_position="BN"
+    )
+    assert _is_on_il_or_il_plus(player_bench) is False, "Player on bench should not be detected as IL"
+    print("✓ Test 3: Player on bench is not IL/IL+")
+
+    # Test 4: Player with no roster position
+    player_no_position = Player(
+        player_key="466.p.4",
+        name="Test Player 4",
+        position="PF",
+        salary=25,
+        source=SalarySource.DRAFT,
+        roster_position=None
+    )
+    assert _is_on_il_or_il_plus(player_no_position) is False, "Player with no position should not be detected as IL"
+    print("✓ Test 4: Player with no roster position is not IL/IL+")
+
+
+def test_analyze_il_violations():
+    """Test IL violation detection for healthy players in IL/IL+ slots."""
+    print("\n" + "=" * 80)
+    print("TEST: IL Violation Analysis")
+    print("=" * 80)
+
+    # Create test players
+    healthy_on_il = Player(
+        player_key="466.p.1",
+        name="Healthy IL Player",
+        position="PG",
+        salary=10,
+        source=SalarySource.DRAFT,
+        nba_team="LAL",
+        roster_position="IL",
+        status=None  # Healthy
+    )
+
+    healthy_on_il_plus = Player(
+        player_key="466.p.2",
+        name="Healthy IL+ Player",
+        position="SG",
+        salary=15,
+        source=SalarySource.DRAFT,
+        nba_team="GSW",
+        roster_position="IL+",
+        status=None  # Healthy
+    )
+
+    injured_on_il = Player(
+        player_key="466.p.3",
+        name="Injured IL Player",
+        position="SF",
+        salary=20,
+        source=SalarySource.DRAFT,
+        nba_team="BOS",
+        roster_position="IL",
+        status="INJ"  # Injured (not a violation)
+    )
+
+    healthy_on_bench = Player(
+        player_key="466.p.4",
+        name="Healthy Bench Player",
+        position="PF",
+        salary=25,
+        source=SalarySource.DRAFT,
+        nba_team="MIA",
+        roster_position="BN",
+        status=None  # Healthy but on bench (not an IL violation)
+    )
+
+    # Create test team with violations
+    team_with_violations = Team(
+        team_id="1",
+        team_key="466.l.12345.t.1",
+        team_name="Team Alpha",
+        manager_name="Manager A",
+        roster=[healthy_on_il, healthy_on_il_plus, injured_on_il, healthy_on_bench],
+        total_salary=70,
+        faab_remaining=100
+    )
+
+    # Create test team without violations
+    team_without_violations = Team(
+        team_id="2",
+        team_key="466.l.12345.t.2",
+        team_name="Team Beta",
+        manager_name="Manager B",
+        roster=[injured_on_il, healthy_on_bench],
+        total_salary=45,
+        faab_remaining=100
+    )
+
+    # Create league
+    league = League(
+        league_id="12345",
+        league_key="466.l.12345",
+        league_name="Test League",
+        season="2024-25",
+        num_teams=2,
+        teams=[team_with_violations, team_without_violations]
+    )
+
+    # Mock fetcher (not used but required by signature)
+    fetcher = None
+
+    # Run analysis
+    violations = analyze_il_violations(league, fetcher)
+
+    # Verify results
+    assert "Team Alpha" in violations, "Team Alpha should have violations"
+    assert len(violations["Team Alpha"]) == 2, "Team Alpha should have 2 violations (IL and IL+)"
+
+    assert violations["Team Alpha"][0]['player_name'] == "Healthy IL Player", "First violation should be Healthy IL Player"
+    assert violations["Team Alpha"][0]['roster_slot'] == "IL", "First violation should be in IL slot"
+
+    assert violations["Team Alpha"][1]['player_name'] == "Healthy IL+ Player", "Second violation should be Healthy IL+ Player"
+    assert violations["Team Alpha"][1]['roster_slot'] == "IL+", "Second violation should be in IL+ slot"
+
+    assert "Team Beta" not in violations, "Team Beta should have no violations"
+    print("✓ Test 1: IL violations detected correctly for Team Alpha")
+    print("✓ Test 2: No violations detected for Team Beta")
+
+
+def test_analyze_il_violations_empty_league():
+    """Test IL violation analysis with no teams."""
+    print("\n" + "=" * 80)
+    print("TEST: IL Violation Analysis - Empty League")
+    print("=" * 80)
+
+    league = League(
+        league_id="12345",
+        league_key="466.l.12345",
+        league_name="Empty League",
+        season="2024-25",
+        num_teams=0,
+        teams=[]
+    )
+
+    violations = analyze_il_violations(league, None)
+    assert violations == {}, "Empty league should return empty violations dict"
+    print("✓ Test 1: Empty league returns no violations")
+
+
 def main():
     """Run all bench analyzer tests."""
     print("\n" + "=" * 80)
@@ -348,6 +529,9 @@ def main():
         test_game_checking()
         test_violation_analysis()
         test_get_teams_with_violations()
+        test_is_on_il_or_il_plus()
+        test_analyze_il_violations()
+        test_analyze_il_violations_empty_league()
 
         print("\n" + "=" * 80)
         print("✓ ALL TESTS PASSED")
@@ -356,6 +540,8 @@ def main():
         print("  • Player health status detection works correctly")
         print("  • Bench position detection works correctly")
         print("  • IL position detection works correctly")
+        print("  • IL/IL+ helper function works correctly")
+        print("  • IL violation analysis detects healthy players in IL/IL+ slots")
         print("  • Game checking handles API responses and failures")
         print("  • Violation analysis detects bench management issues")
         print("  • Team list extraction works correctly")

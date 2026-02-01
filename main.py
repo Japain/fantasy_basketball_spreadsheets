@@ -22,6 +22,7 @@ from src.google_auth import get_google_sheets_service
 from src.discord_notifier import notify_update_complete, notify_error, notify_bench_violations
 from src.bench_analyzer import (
     analyze_bench_violations,
+    analyze_il_violations,
     get_teams_with_bench_violations
 )
 import traceback
@@ -269,36 +270,55 @@ def main():
             today = datetime.now(pacific_tz)
             today_date = today.strftime('%Y-%m-%d')
 
-            print(f"Checking bench violations for: {today_date} (Pacific Time)")
+            print(f"Checking violations for: {today_date} (Pacific Time)")
             print()
 
-            # Analyze violations
-            violations = analyze_bench_violations(
+            # Analyze bench violations
+            bench_violations = analyze_bench_violations(
                 league=league_data,
                 fetcher=fetcher,
                 check_date=today_date
             )
+            bench_teams = get_teams_with_bench_violations(bench_violations)
 
-            # Get team list
-            teams_with_violations = get_teams_with_bench_violations(violations)
+            # Analyze IL violations (NEW)
+            il_violations = analyze_il_violations(league_data, fetcher)
+            il_teams = list(il_violations.keys())
 
-            if teams_with_violations:
-                print(f"⚠ Found {len(teams_with_violations)} team(s) with bench violations:")
-                for team_name in teams_with_violations:
-                    violation_count = len(violations[team_name])
-                    print(f"  • {team_name} ({violation_count} player(s))")
+            # Report findings
+            total_violations = len(bench_teams) + len(il_teams)
+
+            if total_violations > 0:
+                print(f"⚠ Found {total_violations} team(s) with violations:")
+
+                if bench_teams:
+                    print(f"\n  Bench Violations ({len(bench_teams)} team(s)):")
+                    for team_name in bench_teams:
+                        player_count = len(bench_violations[team_name])
+                        print(f"    • {team_name} ({player_count} player(s))")
+
+                if il_teams:
+                    print(f"\n  IL/IL+ Violations ({len(il_teams)} team(s)):")
+                    for team_name in il_teams:
+                        player_count = len(il_violations[team_name])
+                        print(f"    • {team_name} ({player_count} player(s))")
+
                 print()
 
-                # Send Discord notification (no spreadsheet URL in this mode)
-                notify_bench_violations(
-                    teams_with_violations=teams_with_violations,
-                    spreadsheet_url="",  # No spreadsheet in this mode
+                # Send Discord notification
+                success = notify_bench_violations(
+                    bench_violations=bench_violations,
+                    il_violations=il_violations,
+                    spreadsheet_url="",
                     check_date=today_date
                 )
 
-                print("✓ Discord notification sent")
+                if success:
+                    print("✓ Discord notification sent")
+                else:
+                    print("ℹ Discord notification skipped (disabled or failed)")
             else:
-                print("✓ No bench violations found - all teams optimized their lineups!")
+                print("✓ No violations found")
 
             print()
             print("=" * 80)
