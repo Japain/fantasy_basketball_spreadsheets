@@ -464,17 +464,40 @@ def main():
                 transactions = []
             print()
 
-            # Step 2c.5: Cleanup orphaned sheets
-            print("Step 2c.5: Checking for orphaned sheets...")
+            # Step 2c.5: Ensure all teams have correctly named sheets (handles renames)
+            print("Step 2c.5: Ensuring all teams have correctly named sheets...")
             current_team_ids = {team.team_id for team in league_data.teams}
             current_team_names = {team.team_name for team in league_data.teams}
 
             try:
-                from src.sheet_updater import cleanup_orphaned_sheets, _build_sheet_metadata_cache
+                from src.sheet_updater import (
+                    cleanup_orphaned_sheets,
+                    _build_sheet_metadata_cache,
+                    ensure_all_team_sheets_exist_and_renamed
+                )
 
                 # Build metadata cache once to avoid redundant API calls
-                # This cache will be used by cleanup_orphaned_sheets to identify sheets
-                # without making individual API calls for each sheet
+                # This cache will be used by both ensure_all_team_sheets and cleanup_orphaned_sheets
+                metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
+
+                # First, ensure all current teams have sheets with correct names
+                # This handles renames for teams that had no transactions
+                rename_result = ensure_all_team_sheets_exist_and_renamed(
+                    service, spreadsheet_id, league_data.teams,
+                    metadata_cache=metadata_cache
+                )
+
+                if rename_result['created'] > 0:
+                    print(f"  ✓ Created {rename_result['created']} new sheet(s)")
+                if rename_result['renamed'] > 0:
+                    print(f"  ✓ Renamed {rename_result['renamed']} sheet(s)")
+                if rename_result['migrated'] > 0:
+                    print(f"  ✓ Migrated {rename_result['migrated']} sheet(s) to ID-based tracking")
+                if rename_result['created'] == 0 and rename_result['renamed'] == 0 and rename_result['migrated'] == 0:
+                    print("  ✓ All sheets up to date")
+
+                # Then, cleanup orphaned sheets from removed teams
+                # Rebuild metadata cache after renames to get updated sheet titles
                 metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
 
                 deleted_count = cleanup_orphaned_sheets(
@@ -482,12 +505,11 @@ def main():
                     metadata_cache=metadata_cache
                 )
                 if deleted_count > 0:
-                    print(f"✓ Deleted {deleted_count} orphaned sheet(s)")
-                else:
-                    print("✓ No orphaned sheets found")
+                    print(f"  ✓ Deleted {deleted_count} orphaned sheet(s)")
+
             except Exception as e:
-                logger.error(f"Failed to cleanup orphaned sheets: {e}")
-                print(f"⚠ Warning: Orphan cleanup failed: {e}")
+                logger.error(f"Failed to ensure sheets and cleanup orphans: {e}")
+                print(f"⚠ Warning: Sheet maintenance failed: {e}")
                 # Continue anyway - not critical
             print()
 

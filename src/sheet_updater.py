@@ -501,6 +501,98 @@ def _migrate_sheet_to_id_based(service: Any, spreadsheet_id: str, sheet_id: int,
         raise SheetUpdateError(error_msg) from e
 
 
+def ensure_all_team_sheets_exist_and_renamed(service: Any, spreadsheet_id: str, teams: List[Team], metadata_cache: dict = None) -> dict:
+    """
+    Ensure all teams have sheets with correct names (handles renames and missing sheets).
+
+    This function runs BEFORE the transaction-based selective update to ensure:
+    1. Every team has a sheet (creates if missing)
+    2. Every sheet has the correct name (renames if team was renamed)
+    3. All sheets are migrated to ID-based tracking
+
+    This fixes a bug where teams that were renamed but had no transactions would
+    never get their sheets renamed.
+
+    Args:
+        service: Google Sheets API service object.
+        spreadsheet_id: The spreadsheet ID.
+        teams: List of Team objects from Yahoo API.
+        metadata_cache: Optional pre-built metadata cache from _build_sheet_metadata_cache().
+                       If provided, avoids redundant API calls.
+
+    Returns:
+        dict with keys:
+            - 'created': int - number of sheets created
+            - 'renamed': int - number of sheets renamed
+            - 'migrated': int - number of sheets migrated to ID-based tracking
+
+    Raises:
+        SheetUpdateError: If critical operations fail.
+    """
+    logger.info(f"Ensuring all {len(teams)} teams have correctly named sheets...")
+
+    result = {
+        'created': 0,
+        'renamed': 0,
+        'migrated': 0
+    }
+
+    # Use provided metadata cache or build it if not provided
+    if metadata_cache is None:
+        logger.debug("No metadata cache provided, building cache...")
+        metadata_cache = _build_sheet_metadata_cache(service, spreadsheet_id)
+    else:
+        logger.debug("Using provided metadata cache")
+
+    for team in teams:
+        try:
+            # Try to find sheet by team_id
+            if team.team_id in metadata_cache:
+                sheet_id, sheet_title = metadata_cache[team.team_id]
+                logger.debug(f"Found sheet by team_id={team.team_id}: '{sheet_title}'")
+
+                # Check if team was renamed
+                if _detect_team_rename(sheet_title, team.team_name):
+                    logger.info(f"Team renamed: '{sheet_title}' → '{team.team_name}' (team_id={team.team_id})")
+                    _rename_sheet(service, spreadsheet_id, sheet_id, team.team_name)
+                    # Update metadata cache with new name
+                    metadata_cache[team.team_id] = (sheet_id, team.team_name)
+                    result['renamed'] += 1
+                else:
+                    logger.debug(f"Sheet '{sheet_title}' already has correct name")
+            else:
+                # Sheet not found by team_id - try backwards compatibility name lookup
+                logger.debug(f"No sheet found by team_id={team.team_id}, trying name-based lookup...")
+                sheet_id = _find_sheet_id_by_name(service, spreadsheet_id, team.team_name)
+
+                if sheet_id is not None:
+                    # Found by name - migrate to ID-based tracking
+                    logger.info(f"Migrating sheet '{team.team_name}' to ID-based tracking...")
+                    _migrate_sheet_to_id_based(service, spreadsheet_id, sheet_id, team)
+                    # Add to metadata cache
+                    metadata_cache[team.team_id] = (sheet_id, team.team_name)
+                    result['migrated'] += 1
+                else:
+                    # Sheet doesn't exist - create new one
+                    logger.info(f"Sheet for '{team.team_name}' (team_id={team.team_id}) not found. Creating...")
+                    create_team_sheet(service, spreadsheet_id, team)
+                    # Note: We don't update metadata_cache here because we'd need to fetch the new sheet_id
+                    # This is okay - subsequent operations will fetch it if needed
+                    result['created'] += 1
+
+        except Exception as e:
+            error_msg = f"Failed to ensure sheet for team {team.team_name} (team_id={team.team_id}): {e}"
+            logger.error(error_msg)
+            # Continue with other teams - don't fail entire operation
+            continue
+
+    logger.info(
+        f"✓ Sheet check complete: {result['created']} created, "
+        f"{result['renamed']} renamed, {result['migrated']} migrated"
+    )
+    return result
+
+
 def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids: set, current_team_names: set, metadata_cache: dict = None) -> int:
     """
     Identify and delete sheets for teams that no longer exist in the league.

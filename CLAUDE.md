@@ -102,6 +102,40 @@ uv sync
 uv pip list
 ```
 
+### Running Tests
+
+**Test Structure**: Tests are standalone Python scripts with a `main()` function, not pytest-based.
+
+**How to Run Tests**:
+```bash
+# Run a specific test
+uv run python -m tests.test_name
+
+# Examples:
+uv run python -m tests.test_team_rename_detection
+uv run python -m tests.test_api_retry
+uv run python -m tests.test_transaction_tracker
+uv run python -m tests.test_sheet_updater
+```
+
+**Available Tests**:
+- `test_team_rename_detection.py` - Team rename handling (v2.10 bug fix)
+- `test_api_retry.py` - API retry logic with exponential backoff
+- `test_transaction_tracker.py` - Transaction tracking for incremental updates
+- `test_sheet_reader.py` - Sheet reading and timestamp extraction
+- `test_sheet_updater.py` - Sheet updating functionality
+- `test_incremental_update.py` - Full incremental update integration test
+- `test_bench_analyzer.py` - Bench management violation detection
+- `test_il_feature_integration.py` - IL/IL+ violation detection
+- `test_edge_cases.py` - Edge case and error handling
+- `test_batch_reads.py` - Batch read API optimization (v2.5)
+- `test_league_extraction.py` - Yahoo data extraction
+- `test_full_integration.py` - Full integration test (Yahoo + Google)
+
+**Test Output**: Tests print detailed progress and results, with ✓/✗ indicators.
+
+**Note**: Some tests require valid API credentials and network access to Yahoo/Google APIs.
+
 ### Python Environment
 ```bash
 # Activate virtual environment (if needed)
@@ -230,7 +264,7 @@ When using `--verbose`, shows detailed transaction information:
 - Removed teams: Orphaned sheets automatically deleted (v2.3)
 - Backwards compatibility: Works with old spreadsheets without timestamps
 
-### Automatic Team Rename Handling (v2.3)
+### Automatic Team Rename Handling (v2.3 + v2.10 bug fix)
 
 The application now intelligently handles team renames and prevents duplicate sheets.
 
@@ -240,10 +274,11 @@ The application now intelligently handles team renames and prevents duplicate sh
    - Invisible to users (white text on white background)
    - Enables reliable team identification even when names change
 
-2. **Automatic Sheet Renaming**: When teams are renamed in Yahoo Fantasy:
+2. **Automatic Sheet Renaming** (v2.10 fix): When teams are renamed in Yahoo Fantasy:
    - Detects the rename by comparing sheet title with current Yahoo team name
    - Automatically updates the sheet title to match the new name
    - Preserves all data and formatting
+   - **Fixed in v2.10**: Renames now detected even when team has no transactions
 
 3. **Orphaned Sheet Cleanup**: Removes old sheets from renamed/removed teams:
    - Identifies sheets with team_ids not in current league
@@ -257,19 +292,29 @@ The application now intelligently handles team renames and prevents duplicate sh
 
 **What You'll See:**
 ```
+Step 2c.5: Ensuring all teams have correctly named sheets...
+  ✓ Renamed 2 sheet(s)
+
 Step 2c.5: Checking for orphaned sheets...
-→ Found 2 orphaned sheet(s) from renamed/removed teams:
+→ Found 2 orphaned sheet(s) from removed teams:
   • Old Team Name (team_id=3)
   • Another Old Name (team_id=7)
   Deleting orphaned sheets...
 ✓ Deleted 2 orphaned sheet(s)
 ```
 
+**Bug Fix (v2.10):**
+- **Issue**: Teams that were renamed but had no transactions would never get their sheets renamed
+- **Cause**: Rename detection only ran for teams in `teams_to_update` (teams with transactions)
+- **Fix**: Added `ensure_all_team_sheets_exist_and_renamed()` that checks ALL teams before selective update
+- **Example**: "Mark's Young Ant Dick" → "Hooked on Phonics" now renames correctly even with zero transactions
+
 **Technical Details:**
 - **Column Layout Change**: Team sheets now have an extra column A with invisible metadata
 - **Data Location**: All visible data shifted one column right (now in columns B-F instead of A-E)
 - **Sheet Lookup**: Primary lookup by team_id, fallback to name-based for compatibility
 - **Performance**: Efficient batch operations minimize API calls
+- **Rename Check**: Runs before selective update, ensures all sheets have correct names
 
 **Note:** The team_id metadata in column A is system-managed. Do not manually edit this column.
 
