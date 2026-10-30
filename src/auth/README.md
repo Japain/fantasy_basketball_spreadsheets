@@ -1,74 +1,52 @@
 # Authentication Scripts
 
-This directory contains utilities for Yahoo Fantasy Sports API OAuth authentication.
+Utilities for Yahoo Fantasy Sports API OAuth.
 
-## Scripts
+## `auth_with_code.py`
 
-### `auth_with_code.py`
-**Primary authentication script** - Use this for initial OAuth setup in headless/WSL environments.
+Manual authorization-code flow for headless environments. Yahoo no longer supports
+the `oob` redirect, so this uses the registered `https://localhost:8080` redirect.
 
-**Usage:**
 ```bash
-# Run from project root
-uv run python src/auth/auth_with_code.py
+# 1. Print the authorize URL
+uv run python -m src.auth.auth_with_code
+
+# 2. Open it, approve access. The browser lands on a "site can't be reached" page;
+#    copy the code= value from the address bar (single-use, expires in minutes).
+
+# 3. Exchange the code: saves tokens to .env and probes the Fantasy API
+uv run python -m src.auth.auth_with_code <code>
+
+# Verify the refresh path GitHub Actions relies on
+uv run python -m src.auth.auth_with_code --refresh-test
 ```
 
-**What it does:**
-1. Generates Yahoo OAuth authorization URL
-2. Accepts verification code (edit the `verification_code` variable in the script)
-3. Exchanges code for access/refresh tokens
-4. Saves tokens to `.env` file
-5. Tests authentication with a league info API call
+Tests: `uv run python -m tests.test_yahoo_auth` (offline).
 
-**Note:** Update the `verification_code` variable in the script before running.
+## Token storage
 
-### `test_auth.py`
-Interactive authentication test script (requires terminal with stdin support).
+Written to `.env` (lines are replaced in place; other settings are untouched):
+`YAHOO_ACCESS_TOKEN`, `YAHOO_REFRESH_TOKEN`, `YAHOO_TOKEN_TIME`, `YAHOO_TOKEN_TYPE`, `YAHOO_GUID`
+(GUID is the `sub` claim of the returned `id_token`).
 
-**Usage:**
-```bash
-# Run from project root
-uv run python src/auth/test_auth.py
-```
+yfpy refreshes expired access tokens from the refresh token automatically.
 
-**What it does:**
-1. Prompts for manual OAuth authorization
-2. Waits for user to paste verification code
-3. Completes authentication and tests API call
+## GitHub Actions
 
-**Note:** Not suitable for headless environments - use `auth_with_code.py` instead.
+Workflows rebuild `.env` from repository secrets on every run and refresh the access
+token from `YAHOO_REFRESH_TOKEN`. After re-authorizing, update these secrets:
+`YAHOO_CONSUMER_KEY`, `YAHOO_CONSUMER_SECRET`, `YAHOO_ACCESS_TOKEN`,
+`YAHOO_REFRESH_TOKEN`, `YAHOO_TOKEN_TIME`.
 
-### `complete_auth.py`
-Helper script for OAuth exploration (development/debugging purposes).
-
-## OAuth Flow
-
-1. **First Time Setup:**
-   - Edit `src/auth/auth_with_code.py` and set the `verification_code` variable
-   - Get verification code by visiting: https://api.login.yahoo.com/oauth2/request_auth?redirect_uri=oob&response_type=code&client_id=[YOUR_KEY]
-   - Run: `uv run python src/auth/auth_with_code.py`
-
-2. **Subsequent API Calls:**
-   - Tokens are automatically loaded from `.env`
-   - Refresh tokens are used to renew expired access tokens
-   - No manual intervention needed
-
-## Token Storage
-
-Tokens are automatically saved to `.env` file:
-- `YAHOO_ACCESS_TOKEN` - Used for API requests
-- `YAHOO_REFRESH_TOKEN` - Used to renew expired tokens
-- `YAHOO_TOKEN_TIME` - Token expiration timestamp
-- `YAHOO_TOKEN_TYPE` - Token type (bearer)
+As of 2026-10-30 Yahoo does not rotate refresh tokens, so static secrets keep working.
 
 ## Troubleshooting
 
-**"KeyError: 'access_token'"**
-- Verification code expired or already used
-- Get a new verification code and try again
+- **`KeyError: 'access_token'` from yfpy**: stale `YAHOO_*` token lines in `.env`; delete them and re-auth.
+- **`invalid_grant`**: code expired or already used; get a new one.
+- **403 "not authorized to perform this action"** with a valid token: the Yahoo account/app lacks Fantasy API approval.
 
-**"ModuleNotFoundError: No module named 'dotenv'"**
-- Make sure to use `uv run python` instead of `python` or `python3`
+## Google
 
-**"[Errno 20] Not a directory"**
-- Check that `env_file_location` parameter points to directory, not file
+`google_auth_manual.py` and `complete_google_auth.py` are for Google auth and are deprecated
+(OOB flow blocked by Google). Use `uv run python main.py` for the browser flow.

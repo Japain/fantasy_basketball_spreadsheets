@@ -20,7 +20,7 @@ Fantasy basketball application using the Yahoo Fantasy Sports API (yfpy library)
   - `YAHOO_CONSUMER_KEY`: Yahoo Fantasy Sports API credentials
   - `YAHOO_CONSUMER_SECRET`: Yahoo API secret
   - `NBA_LEAGUE_ID`: Your fantasy league ID
-  - `NBA_GAME_ID`: Yahoo game ID (466 for 2024-25 season)
+  - `NBA_GAME_ID`: Yahoo game ID (478 for 2026-27 season)
   - `INITIAL_AUCTION_BUDGET`: Initial auction budget for the league (e.g., 225)
   - `GOOGLE_CREDENTIALS_PATH`: Path to Google OAuth credentials JSON
 - Optional environment variables:
@@ -75,7 +75,13 @@ uv run python main.py --help
 
 **Yahoo OAuth:**
 - Tokens are saved to `.env` automatically
-- If tokens expire, use: `uv run python -m src.auth.auth_with_code`
+- If the refresh token stops working (or for first-time setup):
+  1. `uv run python -m src.auth.auth_with_code` prints the authorize URL
+  2. Approve access, then copy the `code=` value from the "site can't be reached" page (redirect is `https://localhost:8080`)
+  3. `uv run python -m src.auth.auth_with_code <code>` exchanges it, saves tokens to `.env`, and probes the API
+  4. Update the GitHub Actions secrets listed in the output
+- `uv run python -m src.auth.auth_with_code --refresh-test` verifies the refresh path GitHub Actions uses
+- The old `oob` redirect no longer works; yfpy's built-in interactive flow cannot be used for first-time auth
 
 **Google OAuth:**
 - **IMPORTANT**: Ensure your OAuth app is in "Production" status (not "Testing")
@@ -119,6 +125,7 @@ uv run python -m tests.test_sheet_updater
 ```
 
 **Available Tests**:
+- `test_yahoo_auth.py` - Yahoo auth helpers (offline)
 - `test_team_rename_detection.py` - Team rename handling (v2.10 bug fix)
 - `test_api_retry.py` - API retry logic with exponential backoff
 - `test_transaction_tracker.py` - Transaction tracking for incremental updates
@@ -153,9 +160,7 @@ fantasy_basketball/
 ├── main.py                        # Application entry point ✅
 ├── src/
 │   ├── auth/                      # OAuth authentication utilities
-│   │   ├── auth_with_code.py         # Yahoo auth for headless environments ✅
-│   │   ├── test_auth.py              # Interactive Yahoo auth test ✅
-│   │   ├── complete_auth.py          # Yahoo OAuth helper ✅
+│   │   ├── auth_with_code.py         # Yahoo auth: authorize URL, code exchange, refresh test ✅
 │   │   ├── google_auth_manual.py     # Google auth for headless environments ✅
 │   │   ├── complete_google_auth.py   # Google OAuth helper ✅
 │   │   └── README.md                 # Authentication documentation ✅
