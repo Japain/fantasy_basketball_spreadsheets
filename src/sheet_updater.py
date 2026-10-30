@@ -81,18 +81,24 @@ def _apply_sheet_protection(service: Any, spreadsheet_id: str, sheet_id: int, sh
 
         # Execute deletes and adds separately to avoid conflicts
         if delete_requests:
-            service.spreadsheets().batchUpdate(
-                spreadsheetId=spreadsheet_id,
-                body={'requests': delete_requests}
-            ).execute()
+            api_call_with_retry(
+                lambda: service.spreadsheets().batchUpdate(
+                    spreadsheetId=spreadsheet_id,
+                    body={'requests': delete_requests}
+                ).execute(),
+                operation_name="remove existing protection"
+            )
             logger.debug(f"Removed {len(delete_requests)} existing protection(s) from '{sheet_name}'")
 
         # Add new protection
         add_requests = [_create_sheet_protection_request(sheet_id, sheet_name, Config.OWNER_EMAIL)]
-        service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={'requests': add_requests}
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': add_requests}
+            ).execute(),
+            operation_name="add sheet protection"
+        )
 
         logger.debug(f"Applied protection to '{sheet_name}' (owner: {Config.OWNER_EMAIL})")
 
@@ -404,10 +410,13 @@ def _rename_sheet(service: Any, spreadsheet_id: str, sheet_id: int, new_title: s
         }]
 
         # Execute rename
-        service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={'requests': requests}
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': requests}
+            ).execute(),
+            operation_name="rename sheet"
+        )
 
         logger.info(f"✓ Renamed sheet (ID: {sheet_id}) to: '{truncated_title}'")
 
@@ -458,12 +467,15 @@ def _migrate_sheet_to_id_based(service: Any, spreadsheet_id: str, sheet_id: int,
             existing_data.append([f"TEAM_ID:{team.team_id}"])
 
         # Write back the data with metadata
-        service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            range=f"'{sheet_name}'!A1",
-            valueInputOption='USER_ENTERED',
-            body={'values': existing_data}
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{sheet_name}'!A1",
+                valueInputOption='USER_ENTERED',
+                body={'values': existing_data}
+            ).execute(),
+            operation_name="migrate sheet team_id write"
+        )
 
         # Apply invisible formatting to A1 (white text on white background)
         format_request = {
@@ -488,10 +500,13 @@ def _migrate_sheet_to_id_based(service: Any, spreadsheet_id: str, sheet_id: int,
             }
         }
 
-        service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={'requests': [format_request]}
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': [format_request]}
+            ).execute(),
+            operation_name="migrate sheet team_id format"
+        )
 
         logger.info(f"✓ Migration complete for '{team.team_name}' (team_id={team.team_id})")
 
@@ -715,10 +730,13 @@ def cleanup_orphaned_sheets(service: Any, spreadsheet_id: str, current_team_ids:
             logger.info(f"Deleting orphaned sheet: '{sheet_title}' ({reason}, sheet_id={sheet_id})")
 
         # Execute batch deletion
-        service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={'requests': delete_requests}
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': delete_requests}
+            ).execute(),
+            operation_name="delete orphaned sheets"
+        )
 
         logger.info(f"✓ Deleted {len(orphaned_sheets)} orphaned sheet(s)")
         return len(orphaned_sheets)
@@ -787,10 +805,13 @@ def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
         # Clear existing data in the sheet
         # Use current sheet_title for range (might be old name if rename failed, but that's okay)
         clear_range = f"'{sheet_title}'!A1:Z1000"
-        service.spreadsheets().values().clear(
-            spreadsheetId=spreadsheet_id,
-            range=clear_range
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().clear(
+                spreadsheetId=spreadsheet_id,
+                range=clear_range
+            ).execute(),
+            operation_name="clear team sheet"
+        )
         logger.debug(f"Cleared existing data in '{sheet_title}'")
 
         # Generate new data (includes team_id metadata)
@@ -801,22 +822,28 @@ def update_team_sheet(service: Any, spreadsheet_id: str, team: Team) -> None:
         range_name = f"'{sheet_title}'!A1"
         body = {'values': values}
 
-        service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            range=range_name,
-            valueInputOption='USER_ENTERED',
-            body=body
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=range_name,
+                valueInputOption='USER_ENTERED',
+                body=body
+            ).execute(),
+            operation_name="write team sheet"
+        )
         logger.debug(f"Wrote new data to '{sheet_title}'")
 
         # Apply formatting
         num_players = len(team.roster)
         format_requests = _create_team_sheet_formatting(sheet_id, num_players)
 
-        service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={'requests': format_requests}
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={'requests': format_requests}
+            ).execute(),
+            operation_name="format team sheet"
+        )
         logger.debug(f"Applied formatting to '{sheet_title}'")
 
         # Apply protection to the sheet
@@ -901,20 +928,26 @@ def update_summary_sheet(service: Any, spreadsheet_id: str, league: League) -> N
         # Clear existing data and write new data
         # Note: We don't clear formatting, just values
         clear_range = "Summary!A1:Z1000"
-        service.spreadsheets().values().clear(
-            spreadsheetId=spreadsheet_id,
-            range=clear_range
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().clear(
+                spreadsheetId=spreadsheet_id,
+                range=clear_range
+            ).execute(),
+            operation_name="clear summary sheet"
+        )
         logger.debug("Cleared existing Summary sheet data")
 
         # Write new data
         body = {'values': values}
-        service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            range='Summary!A1',
-            valueInputOption='USER_ENTERED',
-            body=body
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range='Summary!A1',
+                valueInputOption='USER_ENTERED',
+                body=body
+            ).execute(),
+            operation_name="write summary sheet"
+        )
 
         # Apply protection to the Summary sheet (sheet_id is always 0)
         _apply_sheet_protection(service, spreadsheet_id, 0, 'Summary')
@@ -954,10 +987,13 @@ def clear_draft_picks_sheet(service: Any, spreadsheet_id: str) -> None:
 
         # Clear all content from the sheet
         clear_range = "'Draft Picks'!A1:Z1000"
-        service.spreadsheets().values().clear(
-            spreadsheetId=spreadsheet_id,
-            range=clear_range
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().clear(
+                spreadsheetId=spreadsheet_id,
+                range=clear_range
+            ).execute(),
+            operation_name="clear draft picks sheet"
+        )
 
         logger.info("✓ Draft Picks sheet cleared (reset to blank)")
 
@@ -1012,10 +1048,13 @@ def update_timestamp(service: Any, spreadsheet_id: str) -> None:
             'data': data
         }
 
-        service.spreadsheets().values().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body=body
-        ).execute()
+        api_call_with_retry(
+            lambda: service.spreadsheets().values().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body=body
+            ).execute(),
+            operation_name="update timestamp"
+        )
 
         logger.info(f"✓ Timestamp updated: {human_readable_timestamp}")
 
